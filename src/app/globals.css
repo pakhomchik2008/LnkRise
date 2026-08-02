@@ -1,0 +1,218 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   LnkRise design tokens
+
+   Deliberately NOT LinkedIn's palette. The original brief specified #0A66C2,
+   which is LinkedIn's corporate blue — we use our own azure so nothing about
+   this product reads as first-party LinkedIn branding. Same reason there are
+   no LinkedIn logos, icons or marks anywhere in this codebase.
+--------------------------------------------------------------------------- */
+
+@theme {
+  /* Brand */
+  --color-brand-50: #eef2ff;
+  --color-brand-100: #dfe6ff;
+  --color-brand-200: #c3d0ff;
+  --color-brand-300: #97acff;
+  --color-brand-400: #647fff;
+  --color-brand-500: #2b59ff;
+  --color-brand-600: #1a3fe0;
+  --color-brand-700: #1631b3;
+  --color-brand-800: #172c8f;
+  --color-brand-900: #182b73;
+
+  --color-violet-brand: #7c3aed;
+  --color-accent-cyan: #06b6d4;
+  --color-accent-orange: #f97316;
+  --color-accent-pink: #ec4899;
+  --color-accent-green: #10b981;
+
+  /* Surfaces */
+  --color-surface: #ffffff;
+  --color-surface-muted: #f8fafc;
+  --color-surface-dark: #0f172a;
+  --color-ink: #0f172a;
+  --color-ink-muted: #64748b;
+  --color-ink-inverse: #f8fafc;
+  --color-hairline: #e2e8f0;
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.12);
+  --shadow-lg: 0 12px 40px rgba(15, 23, 42, 0.16);
+  --shadow-glow: 0 0 24px rgba(124, 58, 237, 0.3);
+
+  /* Type */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, "SFMono-Regular", monospace;
+
+  /* Motion — 150ms micro, 300ms transition, 500ms page */
+  --ease-entrance: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --ease-exit: cubic-bezier(0.55, 0.06, 0.68, 0.19);
+
+  --animate-shimmer: shimmer 1.6s linear infinite;
+  --animate-drift: drift 22s ease-in-out infinite;
+  --animate-gradient: gradient-pan 8s ease infinite;
+}
+
+:root {
+  --gradient-primary: linear-gradient(135deg, #2b59ff, #7c3aed);
+  --gradient-accent: linear-gradient(135deg, #7c3aed, #ec4899, #f97316);
+  --gradient-success: linear-gradient(135deg, #10b981, #06b6d4);
+
+  --gradient-tier-1: linear-gradient(135deg, #94a3b8, #64748b);
+  --gradient-tier-2: linear-gradient(135deg, #06b6d4, #2b59ff);
+  --gradient-tier-3: linear-gradient(135deg, #2b59ff, #7c3aed);
+  --gradient-tier-4: linear-gradient(135deg, #7c3aed, #ec4899);
+  --gradient-tier-5: linear-gradient(135deg, #f97316, #ec4899, #7c3aed);
+}
+
+@keyframes shimmer {
+  from {
+    background-position: -200% 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  33% {
+    transform: translate3d(3%, -4%, 0) scale(1.06);
+  }
+  66% {
+    transform: translate3d(-4%, 3%, 0) scale(0.96);
+  }
+}
+
+@keyframes gradient-pan {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@layer base {
+  * {
+    border-color: var(--color-hairline);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-surface);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Dark sections opt in via data-surface="dark" rather than a global theme. */
+  [data-surface="dark"] {
+    background-color: var(--color-surface-dark);
+    color: var(--color-ink-inverse);
+    --color-hairline: rgba(248, 250, 252, 0.12);
+    --color-ink: #f8fafc;
+    --color-ink-muted: #94a3b8;
+    --color-surface: #0f172a;
+    --color-surface-muted: #1e293b;
+  }
+
+  ::selection {
+    background-color: color-mix(in oklab, var(--color-brand-500) 24%, transparent);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    background: var(--gradient-primary);
+    background-size: 180% 180%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .text-gradient-accent {
+    background: var(--gradient-accent);
+    background-size: 180% 180%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: var(--animate-gradient);
+  }
+
+  .surface-glass {
+    background: color-mix(in oklab, var(--color-surface) 72%, transparent);
+    backdrop-filter: blur(16px) saturate(1.4);
+  }
+
+  .shimmer {
+    background-image: linear-gradient(
+      90deg,
+      color-mix(in oklab, var(--color-ink) 6%, transparent) 25%,
+      color-mix(in oklab, var(--color-ink) 12%, transparent) 37%,
+      color-mix(in oklab, var(--color-ink) 6%, transparent) 63%
+    );
+    background-size: 200% 100%;
+    animation: var(--animate-shimmer);
+  }
+
+  .gradient-border {
+    position: relative;
+    background: var(--color-surface);
+  }
+
+  .gradient-border::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: var(--gradient-primary);
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-hairline) transparent;
+  }
+}
