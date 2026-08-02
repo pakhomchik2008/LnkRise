@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>LnkRise</title>
+    <style>
+      :root {
+        --brand: #2b59ff;
+        --ink: #0f172a;
+        --muted: #64748b;
+        --hairline: #e2e8f0;
+      }
+      * { box-sizing: border-box; }
+      body {
+        width: 320px;
+        margin: 0;
+        padding: 16px;
+        font: 13px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: var(--ink);
+      }
+      h1 { margin: 0 0 2px; font-size: 16px; }
+      p.sub { margin: 0 0 14px; color: var(--muted); font-size: 11px; }
+      label { display: block; font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
+      input {
+        width: 100%; height: 34px; padding: 0 9px; font-size: 13px;
+        border: 1px solid var(--hairline); border-radius: 6px; outline: none;
+      }
+      input:focus { border-color: var(--brand); }
+      button {
+        width: 100%; height: 36px; margin-top: 10px; font-size: 13px; font-weight: 500;
+        border: 0; border-radius: 6px; background: var(--brand); color: #fff; cursor: pointer;
+      }
+      button.secondary { background: #fff; color: var(--ink); border: 1px solid var(--hairline); }
+      button:disabled { opacity: 0.5; cursor: not-allowed; }
+      .row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--hairline); }
+      .row:last-child { border-bottom: 0; }
+      .row span:last-child { font-variant-numeric: tabular-nums; font-weight: 600; }
+      .missing { color: #b45309; }
+      .note { margin-top: 12px; font-size: 11px; color: var(--muted); }
+      .error { margin-top: 10px; padding: 8px; border-radius: 6px; background: #fef2f2; color: #b91c1c; font-size: 13px; }
+      .ok { margin-top: 10px; padding: 8px; border-radius: 6px; background: #ecfdf5; color: #047857; font-size: 13px; }
+      .hidden { display: none; }
+      a { color: var(--brand); }
+    </style>
+  </head>
+  <body>
+    <h1>LnkRise</h1>
+    <p class="sub">Reads your own analytics page. Nothing is sent until you confirm.</p>
+
+    <section id="pair">
+      <label for="key">Ingest key</label>
+      <input id="key" type="password" placeholder="lnk_…" autocomplete="off" />
+      <label for="host" style="margin-top: 10px">App URL</label>
+      <input id="host" type="url" value="http://localhost:3000" />
+      <button id="save">Save</button>
+      <p class="note">Create a key in LnkRise under Settings → Browser extension.</p>
+    </section>
+
+    <section id="main" class="hidden">
+      <button id="read">Read this page</button>
+      <div id="preview" class="hidden">
+        <div id="rows"></div>
+        <button id="send">Send to LnkRise</button>
+        <button id="cancel" class="secondary">Cancel</button>
+      </div>
+      <p class="note">
+        Open your analytics page first —
+        <a href="https://www.linkedin.com/analytics/" target="_blank" rel="noreferrer">linkedin.com/analytics</a>
+      </p>
+      <button id="unpair" class="secondary">Disconnect</button>
+    </section>
+
+    <div id="error" class="error hidden"></div>
+    <div id="success" class="ok hidden"></div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

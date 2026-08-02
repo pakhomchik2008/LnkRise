@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
+import { PublishDialog, type PublishConfig } from "./publish-dialog";
 import type { DailyBriefContent } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -40,7 +41,13 @@ function CopyButton({ text, label = "Copy" }: { text: string; label?: string }) 
   );
 }
 
-export function PostDraftCard({ post }: { post: DailyBriefContent["postIdea"] }) {
+export function PostDraftCard({
+  post,
+  publish,
+}: {
+  post: DailyBriefContent["postIdea"];
+  publish?: PublishConfig;
+}) {
   const [expanded, setExpanded] = React.useState(false);
 
   return (
@@ -96,6 +103,7 @@ export function PostDraftCard({ post }: { post: DailyBriefContent["postIdea"] })
       </button>
 
       <div className="mt-5 flex flex-wrap gap-2">
+        {publish && <PublishDialog text={post.draft} config={publish} />}
         <CopyButton text={post.draft} label="Copy draft" />
         <CopyButton text={post.hook} label="Copy hook" />
       </div>

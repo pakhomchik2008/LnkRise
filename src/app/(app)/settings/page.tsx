@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { ExtensionSection, type KeyView } from "@/components/settings/extension-section";
 import {
   ConnectionsSection,
   DangerZone,
@@ -33,10 +34,17 @@ export default async function SettingsPage() {
       dailyTimeBudget: true,
       accounts: { select: { provider: true } },
       subscription: { select: { plan: true } },
+      apiKeys: {
+        where: { revokedAt: null },
+        orderBy: { createdAt: "desc" },
+        select: { id: true, label: true, prefix: true, lastUsedAt: true, createdAt: true },
+      },
     },
   });
 
   if (!user) redirect("/login");
+
+  const keys: KeyView[] = user.apiKeys;
 
   const view: SettingsUser = {
     ...user,
@@ -55,6 +63,7 @@ export default async function SettingsPage() {
 
       <ProfileSection user={view} />
       <PreferencesSection user={view} />
+      <ExtensionSection keys={keys} />
       <ConnectionsSection user={view} />
       <DangerZone user={view} />
     </div>

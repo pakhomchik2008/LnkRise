@@ -58,6 +58,7 @@ model User {
   tasks        CoachingTask[]
   accounts     Account[]
   sessions     Session[]
+  apiKeys      ApiKey[]
 }
 
 model Account {
@@ -141,6 +142,9 @@ model Post {
   scheduledAt DateTime?
   publishedAt DateTime?
   aiGenerated Boolean   @default(false)
+  /// Set once published through the official API — the post's URN on the
+  /// platform, used to pull per-post analytics back.
+  linkedinUrn String?   @unique
   metrics     Json? // { views, likes, comments, shares }
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -225,4 +229,23 @@ model WaitlistEntry {
   email     String   @unique
   source    String?
   createdAt DateTime @default(now())
+}
+
+/// Pairs the browser extension to an account. The raw key is shown once at
+/// creation and never stored — only its SHA-256 hash, so a database leak does
+/// not hand out working ingest credentials.
+model ApiKey {
+  id         String    @id @default(cuid())
+  userId     String
+  label      String    @default("Browser extension")
+  /// First 8 chars of the raw key, for display. Not a secret.
+  prefix     String
+  hashedKey  String    @unique
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }

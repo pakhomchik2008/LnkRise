@@ -4,6 +4,9 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireUserId } from "@/lib/auth";
 import { computeGrowthScore } from "@/lib/briefs";
+import { communityApiEnabled, LinkedInApiError, publishPost } from "@/lib/linkedin/client";
+import { syncMemberAnalytics } from "@/lib/linkedin/sync";
+import { getLinkedInConnection, hasScope } from "@/lib/linkedin/tokens";
 import { prisma } from "@/lib/prisma";
 import { toUtcDay } from "@/lib/utils";
 import type { ProfileAnalysis } from "@/types";
@@ -131,4 +134,97 @@ export async function logTodayStats(formData: FormData): Promise<ActionResult> {
 
   revalidatePath("/dashboard");
   return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// Publishing through the official API
+// ---------------------------------------------------------------------------
+
+const publishSchema = z.object({
+  text: z.string().trim().min(1, "Nothing to publish").max(3000),
+  taskId: z.string().optional(),
+});
+
+export type PublishOutcome =
+  | { ok: true; urn: string }
+  | { ok: false; error: string; reconnect?: boolean };
+
+/**
+ * Publishes a draft to the member's own feed.
+ *
+ * Only ever reached from a confirmation dialog in which the user has seen the
+ * exact text. There is no scheduler and no background publish path — every
+ * post that leaves this app was pressed by a human.
+ */
+export async function publishDraft(input: unknown): Promise<PublishOutcome> {
+  const userId = await requireUserId();
+
+  const parsed = publishSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid draft" };
+  }
+
+  if (!communityApiEnabled()) {
+    return { ok: false, error: "Publishing is not enabled on this deployment." };
+  }
+
+  const connection = await getLinkedInConnection(userId);
+
+  if (connection.status === "disconnected") {
+    return { ok: false, error: "Connect your account first.", reconnect: true };
+  }
+  if (connection.status === "expired" || !connection.accessToken || !connection.personUrn) {
+    return { ok: false, error: "The connection expired. Reconnect to publish.", reconnect: true };
+  }
+  if (!hasScope(connection, "w_member_social")) {
+    return { ok: false, error: "This account has not granted posting access. Reconnect to add it.", reconnect: true };
+  }
+
+  try {
+    const { urn } = await publishPost(connection.accessToken, connection.personUrn, parsed.data.text);
+
+    await prisma.post.create({
+      data: {
+        userId,
+        content: parsed.data.text,
+        status: "published",
+        publishedAt: new Date(),
+        aiGenerated: true,
+        linkedinUrn: urn,
+      },
+    });
+
+    if (parsed.data.taskId) {
+      await prisma.coachingTask.updateMany({
+        where: { id: parsed.data.taskId, userId },
+        data: { status: "completed", completedAt: new Date() },
+      });
+      await recomputeScore(userId);
+    }
+
+    revalidatePath("/dashboard");
+    return { ok: true, urn };
+  } catch (error) {
+    if (error instanceof LinkedInApiError && error.needsReauth) {
+      return { ok: false, error: "The platform rejected the token. Reconnect.", reconnect: true };
+    }
+    console.error("[publish] failed", error);
+    return { ok: false, error: "The platform refused the post. Nothing was published." };
+  }
+}
+
+export async function syncAnalyticsNow(): Promise<{ ok: boolean; message: string }> {
+  const userId = await requireUserId();
+  const outcome = await syncMemberAnalytics(userId);
+
+  if (!outcome.ok) return { ok: false, message: outcome.message };
+
+  revalidatePath("/dashboard");
+  return {
+    ok: true,
+    message:
+      outcome.daysWritten === 0
+        ? "Connected, but the platform returned no data for this period."
+        : `Pulled ${outcome.daysWritten} ${outcome.daysWritten === 1 ? "day" : "days"} of impressions.`,
+  };
 }

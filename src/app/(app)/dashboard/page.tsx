@@ -9,6 +9,8 @@ import { TodayActions } from "@/components/dashboard/today-actions";
 import { Card } from "@/components/ui/card";
 import { GrowthScore } from "@/components/ui/growth-score";
 import { requireUserId } from "@/lib/auth";
+import { communityApiEnabled } from "@/lib/linkedin/client";
+import { getLinkedInConnection, hasScope } from "@/lib/linkedin/tokens";
 import { prisma } from "@/lib/prisma";
 import { toUtcDay } from "@/lib/utils";
 import type {
@@ -81,6 +83,21 @@ export default async function DashboardPage() {
     connections: snapshot.connections,
   }));
 
+  // Publishing only appears when it can actually work: flag on, account
+  // connected and unexpired, and posting scope actually granted.
+  const connection = communityApiEnabled()
+    ? await getLinkedInConnection(userId)
+    : null;
+
+  const canPublish = Boolean(
+    connection &&
+      connection.status !== "disconnected" &&
+      connection.status !== "expired" &&
+      hasScope(connection, "w_member_social"),
+  );
+
+  const postTaskId = tasks.find((task) => task.type === "post")?.id;
+
   const firstName = user.name?.split(" ")[0] ?? "there";
 
   return (
@@ -123,7 +140,12 @@ export default async function DashboardPage() {
 
       <div className="grid gap-5 lg:grid-cols-2">
         <TodayActions tasks={taskViews} />
-        {content && <BriefCards content={content} />}
+        {content && (
+          <BriefCards
+            content={content}
+            publish={{ enabled: canPublish, taskId: postTaskId }}
+          />
+        )}
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[2fr_1fr]">

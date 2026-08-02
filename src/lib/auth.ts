@@ -20,6 +20,22 @@ export const linkedinEnabled = Boolean(
  */
 export const devSignInEnabled = process.env.NODE_ENV === "development";
 
+/**
+ * Sign-in always requests the OpenID scopes. The Community Management scopes
+ * are only requested once LINKEDIN_COMMUNITY_API=enabled, because LinkedIn
+ * rejects the whole authorization request when an app asks for a permission it
+ * has not been approved for — asking early would break sign-in entirely.
+ */
+export function linkedinScopes(): string[] {
+  const scopes = ["openid", "profile", "email"];
+
+  if (process.env.LINKEDIN_COMMUNITY_API === "enabled") {
+    scopes.push("r_member_postAnalytics", "w_member_social");
+  }
+
+  return scopes;
+}
+
 const credentialsSchema = z.object({
   email: z.string().email(),
   name: z.string().trim().max(80).optional(),
@@ -43,6 +59,7 @@ function buildProviders(): NextAuthConfig["providers"] {
       LinkedIn({
         clientId: process.env.LINKEDIN_CLIENT_ID,
         clientSecret: process.env.LINKEDIN_CLIENT_SECRET,
+        authorization: { params: { scope: linkedinScopes().join(" ") } },
       }),
     );
   }

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { createApiKey, revokeApiKey } from "@/lib/api-keys";
 import { requireUserId } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -91,5 +92,36 @@ export async function deleteAccount(formData: FormData): Promise<Result> {
   }
 
   await prisma.user.delete({ where: { id: userId } });
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// Ingest keys for the browser extension
+// ---------------------------------------------------------------------------
+
+export async function issueApiKey(): Promise<
+  { ok: true; raw: string } | { ok: false; error: string }
+> {
+  const userId = await requireUserId();
+
+  const active = await prisma.apiKey.count({ where: { userId, revokedAt: null } });
+  if (active >= 5) {
+    return { ok: false, error: "You already have five active keys. Revoke one first." };
+  }
+
+  const created = await createApiKey(userId);
+  revalidatePath("/settings");
+
+  // The raw key is returned here and nowhere else — it is not recoverable.
+  return { ok: true, raw: created.raw };
+}
+
+export async function revokeKey(keyId: string): Promise<Result> {
+  const userId = await requireUserId();
+  const revoked = await revokeApiKey(userId, keyId);
+
+  if (!revoked) return { ok: false, error: "That key is already revoked." };
+
+  revalidatePath("/settings");
   return { ok: true };
 }
