@@ -32,7 +32,7 @@ export function GrowthChart({ points }: { points: StatPoint[] }) {
       {data.length < 2 ? (
         <EmptyState
           title="Not enough data to draw a line"
-          description="Log your numbers for two days and the chart appears. It is the only way to tell whether the plan is working rather than just feeling productive."
+          description="Two days of numbers and the chart appears — pulled, read by the extension, or typed. It is the only way to tell whether the plan is working rather than just feeling productive."
         />
       ) : (
         <div className="h-64 w-full">

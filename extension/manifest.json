@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "LnkRise — log my numbers",
+  "version": "0.1.0",
+  "description": "Reads the four numbers from your own analytics page and sends them to your LnkRise account. Read-only, and only when you click.",
+  "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": ["http://localhost:3000/*", "https://*.lnkrise.app/*"],
+  "action": {
+    "default_title": "LnkRise",
+    "default_popup": "popup.html"
+  },
+  "icons": {
+    "128": "icon128.png"
+  }
+}

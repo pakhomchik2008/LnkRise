@@ -84,9 +84,9 @@ export function StatsRow({ points }: { points: StatPoint[] }) {
         >
           <p className="text-sm font-medium text-ink">No numbers logged yet</p>
           <p className="mt-1.5 max-w-lg text-xs leading-relaxed text-ink-muted">
-            Professional platforms do not expose personal analytics through a public API, so this is
-            a thirty-second manual step. Log it daily and the charts fill in — and you get to see
-            whether any of this is actually working.
+            Connect your account in settings to pull impressions automatically, install the browser
+            extension to read them off your own analytics page, or type them here in thirty seconds.
+            Whichever you pick, the charts only mean something once there is a run of days.
           </p>
           <Button size="sm" className="mt-4" onClick={() => setOpen(true)}>
             Log the first four numbers
