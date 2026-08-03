@@ -4,9 +4,11 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { analyzeProfile, generateDailyBrief, generateStrategy } from "@/lib/ai";
 import { requireUserId } from "@/lib/auth";
+import { attachRealPeople, tasksFromBrief } from "@/lib/briefs";
+import { PLAN_ACCESS } from "@/lib/constants";
+import { labelInspirations } from "@/lib/linkedin/inspirations";
 import { prisma, toJson } from "@/lib/prisma";
 import { toUtcDay } from "@/lib/utils";
-import { tasksFromBrief } from "@/lib/briefs";
 import type { OnboardingAnswers } from "@/types";
 
 const answersSchema = z.object({
@@ -42,7 +44,19 @@ export async function completeOnboarding(input: unknown): Promise<CompleteOnboar
   try {
     const analysis = await analyzeProfile(userId, answers, null);
     const strategy = await generateStrategy(userId, answers, analysis.value);
-    const brief = await generateDailyBrief(userId, answers, strategy.value, 1, []);
+    let brief = (await generateDailyBrief(userId, answers, strategy.value, 1, [])).value;
+
+    // Named people (the inspirations named during onboarding) are a
+    // commentCoaching-gated feature — trial does not get them. Every
+    // signup lands on "trial" below, so this branch is currently
+    // unreachable from this call site: there is no upgrade-to-paid flow
+    // yet (Stripe/billing is Phase 6). The gate is correct now so nothing
+    // has to change here once billing exists — it will just start firing.
+    const newSubscriptionPlan = "trial" as const;
+    if (PLAN_ACCESS[newSubscriptionPlan].commentCoaching) {
+      const inspirations = labelInspirations(answers.inspirations);
+      brief = attachRealPeople(brief, inspirations);
+    }
 
     const today = toUtcDay();
 
@@ -75,14 +89,14 @@ export async function completeOnboarding(input: unknown): Promise<CompleteOnboar
 
       const created = await tx.dailyBrief.upsert({
         where: { userId_date: { userId, date: today } },
-        update: { content: toJson(brief.value) },
-        create: { userId, date: today, content: toJson(brief.value) },
+        update: { content: toJson(brief) },
+        create: { userId, date: today, content: toJson(brief) },
       });
 
       // Replace any tasks already attached to today's brief so a re-run is idempotent.
       await tx.coachingTask.deleteMany({ where: { briefId: created.id } });
       await tx.coachingTask.createMany({
-        data: tasksFromBrief(brief.value).map((task) => ({
+        data: tasksFromBrief(brief).map((task) => ({
           type: task.type,
           title: task.title,
           description: task.description,
