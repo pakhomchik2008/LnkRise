@@ -258,8 +258,28 @@ export function CommentCard({
           >
             <div className="flex items-start justify-between gap-2">
               <div>
-                <p className="text-sm font-semibold text-ink">Find a post about: {item.topic}</p>
+                {item.person ? (
+                  <p className="text-sm font-semibold text-ink">
+                    Check{" "}
+                    <a
+                      href={item.person.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-brand-600 underline-offset-2 hover:underline"
+                    >
+                      {item.person.name}&rsquo;s profile
+                    </a>{" "}
+                    for a new post
+                  </p>
+                ) : (
+                  <p className="text-sm font-semibold text-ink">Find a post about: {item.topic}</p>
+                )}
                 <p className="mt-0.5 text-xs leading-relaxed text-ink-muted">{item.why}</p>
+                {item.person && (
+                  <Badge tone="premium" className="mt-1.5">
+                    From people you follow
+                  </Badge>
+                )}
               </div>
               <DoneToggle taskId={tasks[index]?.id} done={tasks[index]?.done ?? false} />
             </div>

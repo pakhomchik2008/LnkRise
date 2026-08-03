@@ -122,6 +122,13 @@ export interface CommentSuggestion {
   why: string;
   starters: string[];
   timeEstimate: string;
+  /**
+   * Set only by our own post-processing (attachRealPeople), never by the AI
+   * or mock generator — a generated field claiming to name a real person
+   * would be a hallucination risk. Absent means the topic is a category, not
+   * an individual.
+   */
+  person?: { name: string; url: string };
 }
 
 export interface DailyBriefContent {

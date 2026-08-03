@@ -1,4 +1,5 @@
 import type { DailyBriefContent, TaskPriority, TaskStatus, TaskType } from "@/types";
+import type { NamedInspiration } from "@/lib/linkedin/inspirations";
 
 export interface NewTask {
   type: TaskType;
@@ -53,6 +54,40 @@ export function tasksFromBrief(brief: DailyBriefContent): NewTask[] {
   });
 
   return tasks;
+}
+
+/**
+ * Replaces the first commentOn slots with named people — one of the
+ * inspirations the user pointed at during onboarding — instead of a
+ * category. Pro-tier only (gated by the caller on PLAN_ACCESS.commentCoaching);
+ * trial users keep the category-only brief.
+ *
+ * This never touches AI/mock output directly: `person` is attached here,
+ * after generation, precisely so the model is never the one asserting a real
+ * identity. If it ran inside the prompt instead, a model with no actual
+ * knowledge of whether that account posted anything today could confidently
+ * invent detail about a real person — this keeps the claim to what we
+ * actually know (a URL the user gave us), nothing more.
+ */
+export function attachRealPeople(
+  brief: DailyBriefContent,
+  inspirations: NamedInspiration[],
+): DailyBriefContent {
+  if (inspirations.length === 0) return brief;
+
+  const commentOn = brief.commentOn.map((item, index) => {
+    const person = inspirations[index];
+    if (!person) return item;
+
+    return {
+      ...item,
+      topic: `${person.name}’s recent posts`,
+      why: `You told us ${person.name} is one of the people whose work you follow. A real comment from you carries more weight with them than with a stranger.`,
+      person,
+    };
+  });
+
+  return { ...brief, commentOn };
 }
 
 export interface TaskRef {
