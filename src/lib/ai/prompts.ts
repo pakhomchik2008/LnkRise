@@ -98,7 +98,7 @@ The post draft is the centrepiece — it must be publishable as-is, in the user'
 
 The three outreach suggestions describe categories of people, never named individuals. Each carries a search query the user can paste into the platform's search, and a first message that references something specific rather than complimenting the recipient generically.
 
-The engagement suggestions name the kind of post to look for and give openers the user can adapt — not comments to paste verbatim.`;
+For each engagement suggestion, "starters" must be complete, ready-to-post comments — one to three full sentences, no ellipsis, no bracketed placeholders. Something the user could paste onto a matching post exactly as written, not a fragment they have to finish themselves.`;
 
 export function dailyBriefPrompt(
   answers: OnboardingAnswers,

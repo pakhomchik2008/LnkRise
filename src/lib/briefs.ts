@@ -1,4 +1,4 @@
-import type { DailyBriefContent, TaskPriority, TaskType } from "@/types";
+import type { DailyBriefContent, TaskPriority, TaskStatus, TaskType } from "@/types";
 
 export interface NewTask {
   type: TaskType;
@@ -9,8 +9,10 @@ export interface NewTask {
 }
 
 /**
- * A brief is content; tasks are the trackable version of it. One place builds
- * them so the dashboard, the brief page and the cron job cannot drift apart.
+ * A brief is content; tasks are the trackable version of it. One task per
+ * card item — every person to reach out to and every conversation to join
+ * gets its own row, not just the first two of each. That is what lets each
+ * card render its own "done" checkbox instead of a separate duplicate list.
  */
 export function tasksFromBrief(brief: DailyBriefContent): NewTask[] {
   const tasks: NewTask[] = [
@@ -23,7 +25,7 @@ export function tasksFromBrief(brief: DailyBriefContent): NewTask[] {
     },
   ];
 
-  brief.connectWith.slice(0, 2).forEach((connect) => {
+  brief.connectWith.forEach((connect) => {
     tasks.push({
       type: "connect",
       title: `Reach out: ${connect.audience}`,
@@ -33,10 +35,10 @@ export function tasksFromBrief(brief: DailyBriefContent): NewTask[] {
     });
   });
 
-  brief.commentOn.slice(0, 2).forEach((comment) => {
+  brief.commentOn.forEach((comment) => {
     tasks.push({
       type: "comment",
-      title: `Join the conversation: ${comment.topic}`,
+      title: `Comment: ${comment.topic}`,
       description: comment.why,
       priority: "medium",
       aiData: { starters: comment.starters, timeEstimate: comment.timeEstimate },
@@ -51,6 +53,49 @@ export function tasksFromBrief(brief: DailyBriefContent): NewTask[] {
   });
 
   return tasks;
+}
+
+export interface TaskRef {
+  id: string;
+  done: boolean;
+}
+
+export interface BriefTaskGroups {
+  post?: TaskRef;
+  connect: TaskRef[];
+  comment: TaskRef[];
+  optimize?: TaskRef;
+}
+
+/**
+ * Maps flat CoachingTask rows back onto the brief's cards, one row per card
+ * item. Tasks for the same brief are inserted in the same order the content
+ * arrays are built in (see tasksFromBrief above), and cuid ids are
+ * K-sortable — lexical id order reconstructs insertion order reliably, even
+ * when every row in a batch shares one createMany timestamp.
+ */
+export function groupTasksByType(
+  tasks: { id: string; type: TaskType; status: TaskStatus }[],
+): BriefTaskGroups {
+  const sorted = [...tasks].sort((a, b) => a.id.localeCompare(b.id));
+  const byType = (type: TaskType): TaskRef[] =>
+    sorted
+      .filter((task) => task.type === type)
+      .map((task) => ({ id: task.id, done: task.status === "completed" }));
+
+  return {
+    post: byType("post")[0],
+    connect: byType("connect"),
+    comment: byType("comment"),
+    optimize: byType("optimize")[0],
+  };
+}
+
+export function briefProgress(groups: BriefTaskGroups): { done: number; total: number } {
+  const all = [groups.post, ...groups.connect, ...groups.comment, groups.optimize].filter(
+    (task): task is TaskRef => Boolean(task),
+  );
+  return { done: all.filter((task) => task.done).length, total: all.length };
 }
 
 /**
