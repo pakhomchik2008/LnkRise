@@ -1,26 +1,19 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Target } from "lucide-react";
-import { BriefCards } from "@/components/dashboard/brief-section";
+import { BriefCards, BriefProgress } from "@/components/dashboard/brief-section";
 import { DayComplete } from "@/components/dashboard/day-complete";
 import { GrowthChart } from "@/components/dashboard/growth-chart";
 import { StatsRow } from "@/components/dashboard/stats-row";
-import { TodayActions } from "@/components/dashboard/today-actions";
 import { Card } from "@/components/ui/card";
 import { GrowthScore } from "@/components/ui/growth-score";
 import { requireUserId } from "@/lib/auth";
+import { groupTasksByType } from "@/lib/briefs";
 import { communityApiEnabled } from "@/lib/linkedin/client";
 import { getLinkedInConnection, hasScope } from "@/lib/linkedin/tokens";
 import { prisma } from "@/lib/prisma";
 import { toUtcDay } from "@/lib/utils";
-import type {
-  CoachingTaskView,
-  DailyBriefContent,
-  StatPoint,
-  Strategy,
-  TaskPriority,
-  TaskType,
-} from "@/types";
+import type { DailyBriefContent, StatPoint, Strategy, TaskStatus, TaskType } from "@/types";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -52,8 +45,7 @@ export default async function DashboardPage() {
     }),
     prisma.coachingTask.findMany({
       where: { userId, createdAt: { gte: today } },
-      orderBy: [{ priority: "asc" }, { createdAt: "asc" }],
-      select: { id: true, type: true, title: true, description: true, priority: true, status: true },
+      select: { id: true, type: true, status: true },
     }),
     prisma.analyticsSnapshot.findMany({
       where: { userId },
@@ -66,14 +58,13 @@ export default async function DashboardPage() {
   const strategy = user.strategy as unknown as Strategy | null;
   const dayComplete = (brief?.completed as Record<string, unknown> | null)?.dayComplete === true;
 
-  const taskViews: CoachingTaskView[] = tasks.map((task) => ({
-    id: task.id,
-    type: task.type as TaskType,
-    title: task.title,
-    description: task.description,
-    priority: task.priority as TaskPriority,
-    status: task.status as CoachingTaskView["status"],
-  }));
+  const taskGroups = groupTasksByType(
+    tasks.map((task) => ({
+      id: task.id,
+      type: task.type as TaskType,
+      status: task.status as TaskStatus,
+    })),
+  );
 
   const points: StatPoint[] = snapshots.map((snapshot) => ({
     date: snapshot.date.toISOString().slice(0, 10),
@@ -85,9 +76,7 @@ export default async function DashboardPage() {
 
   // Publishing only appears when it can actually work: flag on, account
   // connected and unexpired, and posting scope actually granted.
-  const connection = communityApiEnabled()
-    ? await getLinkedInConnection(userId)
-    : null;
+  const connection = communityApiEnabled() ? await getLinkedInConnection(userId) : null;
 
   const canPublish = Boolean(
     connection &&
@@ -95,8 +84,6 @@ export default async function DashboardPage() {
       connection.status !== "expired" &&
       hasScope(connection, "w_member_social"),
   );
-
-  const postTaskId = tasks.find((task) => task.type === "post")?.id;
 
   const firstName = user.name?.split(" ")[0] ?? "there";
 
@@ -138,15 +125,16 @@ export default async function DashboardPage() {
 
       <StatsRow points={points} />
 
-      <div className="grid gap-5 lg:grid-cols-2">
-        <TodayActions tasks={taskViews} />
-        {content && (
+      {content && (
+        <>
+          <BriefProgress tasks={taskGroups} />
           <BriefCards
             content={content}
-            publish={{ enabled: canPublish, taskId: postTaskId }}
+            tasks={taskGroups}
+            publish={{ enabled: canPublish, taskId: taskGroups.post?.id }}
           />
-        )}
-      </div>
+        </>
+      )}
 
       <div className="grid gap-5 lg:grid-cols-[2fr_1fr]">
         <GrowthChart points={points} />

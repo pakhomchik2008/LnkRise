@@ -227,7 +227,7 @@ export function mockDailyBrief({ seed, answers }: MockInput & { day?: string }):
     (item) => ({
       topic: fill(item.topic, vars),
       why: fill(item.why, vars),
-      starters: item.starters.map((starter) => `${fill(starter, vars)} …`),
+      starters: item.starters.map((starter) => fill(starter, vars)),
       timeEstimate: `~${3 + Math.floor(random() * 3)} minutes`,
     }),
   );

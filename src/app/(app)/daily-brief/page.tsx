@@ -1,14 +1,13 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { format } from "date-fns";
-import { BriefCards } from "@/components/dashboard/brief-section";
-import { TodayActions } from "@/components/dashboard/today-actions";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { BriefCards, BriefProgress } from "@/components/dashboard/brief-section";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireUserId } from "@/lib/auth";
+import { groupTasksByType } from "@/lib/briefs";
 import { prisma } from "@/lib/prisma";
 import { toUtcDay } from "@/lib/utils";
-import type { CoachingTaskView, DailyBriefContent, TaskPriority, TaskType } from "@/types";
+import type { DailyBriefContent, TaskStatus, TaskType } from "@/types";
 
 export const metadata: Metadata = {
   title: "Daily brief",
@@ -33,8 +32,7 @@ export default async function DailyBriefPage() {
     }),
     prisma.coachingTask.findMany({
       where: { userId, createdAt: { gte: today } },
-      orderBy: [{ priority: "asc" }, { createdAt: "asc" }],
-      select: { id: true, type: true, title: true, description: true, priority: true, status: true },
+      select: { id: true, type: true, status: true },
     }),
     prisma.dailyBrief.findMany({
       where: { userId, date: { lt: today } },
@@ -46,14 +44,13 @@ export default async function DailyBriefPage() {
 
   const content = (brief?.content ?? undefined) as unknown as DailyBriefContent | undefined;
 
-  const taskViews: CoachingTaskView[] = tasks.map((task) => ({
-    id: task.id,
-    type: task.type as TaskType,
-    title: task.title,
-    description: task.description,
-    priority: task.priority as TaskPriority,
-    status: task.status as CoachingTaskView["status"],
-  }));
+  const taskGroups = groupTasksByType(
+    tasks.map((task) => ({
+      id: task.id,
+      type: task.type as TaskType,
+      status: task.status as TaskStatus,
+    })),
+  );
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -67,18 +64,8 @@ export default async function DailyBriefPage() {
 
       {content ? (
         <>
-          <TodayActions tasks={taskViews} />
-          <BriefCards content={content} />
-
-          <Card>
-            <CardHeader>
-              <div>
-                <CardTitle>Optimise one thing</CardTitle>
-                <CardDescription>{content.optimizationTip.title}</CardDescription>
-              </div>
-            </CardHeader>
-            <p className="text-sm leading-relaxed text-ink">{content.optimizationTip.detail}</p>
-          </Card>
+          <BriefProgress tasks={taskGroups} />
+          <BriefCards content={content} tasks={taskGroups} />
         </>
       ) : (
         <EmptyState

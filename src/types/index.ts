@@ -136,15 +136,6 @@ export type TaskType = "post" | "connect" | "comment" | "optimize" | "engage";
 export type TaskStatus = "pending" | "completed" | "skipped";
 export type TaskPriority = "high" | "medium" | "low";
 
-export interface CoachingTaskView {
-  id: string;
-  type: TaskType;
-  title: string;
-  description: string | null;
-  priority: TaskPriority;
-  status: TaskStatus;
-}
-
 // ---------------------------------------------------------------------------
 // Analytics
 // ---------------------------------------------------------------------------

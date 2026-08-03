@@ -1,15 +1,17 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Check, ChevronDown, Copy, MessageSquare, PenLine, UserPlus } from "lucide-react";
+import { Check, Copy, MessageSquare, PenLine, Search, Send, UserPlus, Wrench } from "lucide-react";
 import * as React from "react";
+import { toggleTask } from "@/app/(app)/dashboard/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
-import { PublishDialog, type PublishConfig } from "./publish-dialog";
-import type { DailyBriefContent } from "@/types";
+import type { TaskRef } from "@/lib/briefs";
 import { cn } from "@/lib/utils";
+import type { DailyBriefContent } from "@/types";
+import { PublishDialog, type PublishConfig } from "./publish-dialog";
 
 function CopyButton({ text, label = "Copy" }: { text: string; label?: string }) {
   const { toast } = useToast();
@@ -41,15 +43,69 @@ function CopyButton({ text, label = "Copy" }: { text: string; label?: string }) 
   );
 }
 
+/**
+ * Per-item "done" toggle. Every checkable thing in these cards (the post, one
+ * person to reach out to, one conversation to join, the profile tip) is its
+ * own CoachingTask row, so each gets its own independent toggle rather than
+ * a shared list somewhere else on the page.
+ */
+function DoneToggle({ taskId, done, label = "Mark as done" }: { taskId?: string; done: boolean; label?: string }) {
+  const { toast } = useToast();
+  const [pending, startTransition] = React.useTransition();
+  const [optimisticDone, setOptimisticDone] = React.useOptimistic(done, (_current, next: boolean) => next);
+
+  if (!taskId) return null;
+
+  function onClick() {
+    startTransition(async () => {
+      setOptimisticDone(!optimisticDone);
+      const result = await toggleTask(taskId as string);
+      if (!result.ok) toast({ tone: "error", title: result.error });
+    });
+  }
+
+  return (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={optimisticDone}
+      onClick={onClick}
+      disabled={pending}
+      className={cn(
+        "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors duration-150",
+        optimisticDone
+          ? "border-transparent bg-accent-green/15 text-emerald-700"
+          : "border-hairline text-ink-muted hover:border-brand-300 hover:text-ink",
+        pending && "opacity-60",
+      )}
+    >
+      <span
+        aria-hidden
+        className={cn(
+          "grid size-3.5 place-items-center rounded-full border transition-colors duration-150",
+          optimisticDone ? "border-transparent bg-accent-green" : "border-current",
+        )}
+      >
+        {optimisticDone && <Check className="size-2.5 text-white" strokeWidth={3} />}
+      </span>
+      {optimisticDone ? "Done" : label}
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Post
+// ---------------------------------------------------------------------------
+
 export function PostDraftCard({
   post,
+  task,
   publish,
 }: {
   post: DailyBriefContent["postIdea"];
+  task?: TaskRef;
   publish?: PublishConfig;
 }) {
-  const [expanded, setExpanded] = React.useState(false);
-
   return (
     <Card className="flex flex-col">
       <CardHeader>
@@ -58,90 +114,105 @@ export function PostDraftCard({
             <PenLine aria-hidden className="size-4 text-brand-500" />
             Today&rsquo;s post
           </CardTitle>
-          <p className="mt-1 text-sm text-ink-muted">{post.topic}</p>
+          <CardDescription>The exact text below is ready to publish — copy it or post it directly.</CardDescription>
         </div>
-        <Badge tone="info">Draft ready</Badge>
+        <Badge tone="info">Ready</Badge>
       </CardHeader>
 
       <p className="rounded-[var(--radius-sm)] bg-surface-muted px-3 py-2.5 text-xs leading-relaxed text-ink-muted">
-        <span className="font-semibold text-ink">Why this: </span>
+        <span className="font-semibold text-ink">Why this topic: </span>
         {post.why}
       </p>
 
-      <div className="mt-4">
-        <p className="text-xs font-semibold text-ink">Hook</p>
-        <p className="mt-1 text-sm italic leading-relaxed text-ink">{post.hook}</p>
-      </div>
-
-      <motion.div
-        initial={false}
-        animate={{ height: expanded ? "auto" : 132 }}
-        transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
-        className="relative mt-4 overflow-hidden"
-      >
+      <p className="mt-4 text-xs font-semibold text-ink">
+        Post this on LinkedIn
+      </p>
+      <div className="mt-1.5 rounded-[var(--radius-sm)] border border-hairline bg-surface p-3.5">
         <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-ink">
           {post.draft}
         </pre>
-        {!expanded && (
-          <span
-            aria-hidden
-            className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-surface to-transparent"
-          />
-        )}
-      </motion.div>
+      </div>
 
-      <button
-        type="button"
-        onClick={() => setExpanded((value) => !value)}
-        className="mt-2 inline-flex items-center gap-1 self-start text-xs font-medium text-brand-600 hover:text-brand-700"
-      >
-        {expanded ? "Show less" : "Show the full draft"}
-        <ChevronDown
-          aria-hidden
-          className={cn("size-3.5 transition-transform duration-300", expanded && "rotate-180")}
-        />
-      </button>
-
-      <div className="mt-5 flex flex-wrap gap-2">
-        {publish && <PublishDialog text={post.draft} config={publish} />}
-        <CopyButton text={post.draft} label="Copy draft" />
-        <CopyButton text={post.hook} label="Copy hook" />
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-2">
+          {publish && <PublishDialog text={post.draft} config={publish} />}
+          <CopyButton text={post.draft} label="Copy this post" />
+        </div>
+        <DoneToggle taskId={task?.id} done={task?.done ?? false} label="Mark as posted" />
       </div>
     </Card>
   );
 }
 
-export function ConnectCard({ items }: { items: DailyBriefContent["connectWith"] }) {
+// ---------------------------------------------------------------------------
+// Connect
+// ---------------------------------------------------------------------------
+
+export function ConnectCard({
+  items,
+  tasks,
+}: {
+  items: DailyBriefContent["connectWith"];
+  tasks: TaskRef[];
+}) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <UserPlus aria-hidden className="size-4 text-brand-500" />
-          Who to reach out to
-        </CardTitle>
+        <div>
+          <CardTitle className="flex items-center gap-2">
+            <UserPlus aria-hidden className="size-4 text-brand-500" />
+            People to connect with today
+          </CardTitle>
+          <CardDescription>
+            For each one: search LinkedIn with the query shown, open a profile that matches, then
+            send the message as your connection note.
+          </CardDescription>
+        </div>
       </CardHeader>
 
-      <ul className="space-y-4">
+      <ul className="space-y-5">
         {items.map((item, index) => (
           <motion.li
             key={item.audience}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: index * 0.06 }}
-            className="border-b border-hairline pb-4 last:border-0 last:pb-0"
+            className="border-b border-hairline pb-5 last:border-0 last:pb-0"
           >
-            <p className="text-sm font-medium text-ink">{item.audience}</p>
-            <p className="mt-1 text-xs leading-relaxed text-ink-muted">{item.why}</p>
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="text-sm font-semibold text-ink">{item.audience}</p>
+                <p className="mt-0.5 text-xs leading-relaxed text-ink-muted">{item.why}</p>
+              </div>
+              <DoneToggle taskId={tasks[index]?.id} done={tasks[index]?.done ?? false} label="Mark as reached out" />
+            </div>
 
             {item.searchQuery && (
-              <p className="mt-2 truncate rounded-[var(--radius-sm)] bg-surface-muted px-2 py-1.5 font-mono text-[11px] text-ink-muted">
-                {item.searchQuery}
-              </p>
+              <div className="mt-3">
+                <p className="flex items-center gap-1.5 text-[11px] font-semibold text-ink-muted">
+                  <Search aria-hidden className="size-3" />
+                  Step 1 — search LinkedIn for
+                </p>
+                <div className="mt-1 flex items-start gap-2">
+                  <p className="min-w-0 flex-1 truncate rounded-[var(--radius-sm)] bg-surface-muted px-2.5 py-2 font-mono text-[11px] text-ink">
+                    {item.searchQuery}
+                  </p>
+                  <CopyButton text={item.searchQuery} label="Copy" />
+                </div>
+              </div>
             )}
 
-            <div className="mt-2 flex flex-wrap gap-2">
-              <CopyButton text={item.message} label="Copy opener" />
-              {item.searchQuery && <CopyButton text={item.searchQuery} label="Copy search" />}
+            <div className="mt-3">
+              <p className="flex items-center gap-1.5 text-[11px] font-semibold text-ink-muted">
+                <Send aria-hidden className="size-3" />
+                {item.searchQuery ? "Step 2 — send this as your note" : "Send this as your connection note"}
+              </p>
+              <div className="mt-1 rounded-[var(--radius-sm)] bg-surface-muted px-2.5 py-2 text-xs leading-relaxed text-ink">
+                {item.message}
+              </div>
+              <div className="mt-1.5">
+                <CopyButton text={item.message} label="Copy message" />
+              </div>
             </div>
           </motion.li>
         ))}
@@ -150,68 +221,97 @@ export function ConnectCard({ items }: { items: DailyBriefContent["connectWith"]
   );
 }
 
-export function CommentCard({ items }: { items: DailyBriefContent["commentOn"] }) {
-  const [open, setOpen] = React.useState<number | null>(0);
+// ---------------------------------------------------------------------------
+// Comment
+// ---------------------------------------------------------------------------
 
+export function CommentCard({
+  items,
+  tasks,
+}: {
+  items: DailyBriefContent["commentOn"];
+  tasks: TaskRef[];
+}) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <MessageSquare aria-hidden className="size-4 text-brand-500" />
-          Conversations worth joining
-        </CardTitle>
+        <div>
+          <CardTitle className="flex items-center gap-2">
+            <MessageSquare aria-hidden className="size-4 text-brand-500" />
+            Comments to leave today
+          </CardTitle>
+          <CardDescription>
+            For each topic: find a recent LinkedIn post that matches, then post one of the comments
+            below on it, as-is or lightly adjusted.
+          </CardDescription>
+        </div>
       </CardHeader>
 
-      <ul className="space-y-2">
-        {items.map((item, index) => {
-          const isOpen = open === index;
-          return (
-            <li key={item.topic} className="rounded-[var(--radius-sm)] border border-hairline">
-              <button
-                type="button"
-                onClick={() => setOpen(isOpen ? null : index)}
-                aria-expanded={isOpen}
-                className="flex w-full items-start justify-between gap-3 px-3 py-2.5 text-left"
-              >
-                <span>
-                  <span className="block text-sm font-medium text-ink">{item.topic}</span>
-                  <span className="mt-0.5 block font-mono text-[11px] text-ink-muted">
-                    {item.timeEstimate}
-                  </span>
-                </span>
-                <ChevronDown
-                  aria-hidden
-                  className={cn(
-                    "mt-1 size-4 shrink-0 text-ink-muted transition-transform duration-300",
-                    isOpen && "rotate-180",
-                  )}
-                />
-              </button>
+      <ul className="space-y-5">
+        {items.map((item, index) => (
+          <motion.li
+            key={item.topic}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: index * 0.06 }}
+            className="border-b border-hairline pb-5 last:border-0 last:pb-0"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="text-sm font-semibold text-ink">Find a post about: {item.topic}</p>
+                <p className="mt-0.5 text-xs leading-relaxed text-ink-muted">{item.why}</p>
+              </div>
+              <DoneToggle taskId={tasks[index]?.id} done={tasks[index]?.done ?? false} />
+            </div>
 
-              <motion.div
-                initial={false}
-                animate={{ height: isOpen ? "auto" : 0, opacity: isOpen ? 1 : 0 }}
-                transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
-                className="overflow-hidden"
-              >
-                <div className="px-3 pb-3">
-                  <p className="text-xs leading-relaxed text-ink-muted">{item.why}</p>
-                  <ul className="mt-2 space-y-1.5">
-                    {item.starters.map((starter) => (
-                      <li
-                        key={starter}
-                        className="rounded-[var(--radius-sm)] bg-surface-muted px-2.5 py-2 text-xs leading-relaxed text-ink"
-                      >
-                        {starter}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </motion.div>
-            </li>
-          );
-        })}
+            <p className="mt-3 text-[11px] font-semibold text-ink-muted">
+              Pick one comment to post ({item.timeEstimate})
+            </p>
+            <ul className="mt-1.5 space-y-2">
+              {item.starters.map((starter) => (
+                <li
+                  key={starter}
+                  className="rounded-[var(--radius-sm)] border border-hairline bg-surface-muted px-3 py-2.5"
+                >
+                  <p className="text-xs leading-relaxed text-ink">{starter}</p>
+                  <div className="mt-1.5">
+                    <CopyButton text={starter} label="Copy comment" />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </motion.li>
+        ))}
       </ul>
+    </Card>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Profile tip
+// ---------------------------------------------------------------------------
+
+export function OptimizeCard({
+  tip,
+  task,
+}: {
+  tip: DailyBriefContent["optimizationTip"];
+  task?: TaskRef;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <div>
+          <CardTitle className="flex items-center gap-2">
+            <Wrench aria-hidden className="size-4 text-brand-500" />
+            One profile fix for today
+          </CardTitle>
+          <CardDescription>{tip.title}</CardDescription>
+        </div>
+        <DoneToggle taskId={task?.id} done={task?.done ?? false} />
+      </CardHeader>
+
+      <p className="text-sm leading-relaxed text-ink">{tip.detail}</p>
     </Card>
   );
 }
