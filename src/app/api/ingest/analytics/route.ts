@@ -16,15 +16,22 @@ import { toUtcDay } from "@/lib/utils";
 
 export const runtime = "nodejs";
 
-const payloadSchema = z.object({
-  profileViews: z.number().int().min(0).max(10_000_000),
-  postImpressions: z.number().int().min(0).max(100_000_000),
-  followers: z.number().int().min(0).max(100_000_000),
-  connections: z.number().int().min(0).max(100_000),
-  searchAppearances: z.number().int().min(0).max(10_000_000).optional(),
-  /** yyyy-mm-dd. Defaults to today. Cannot be in the future. */
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-});
+// Every metric is optional: the numbers are split across two LinkedIn pages, so
+// one read never carries all of them. Absent means "unknown", not zero — a
+// partial update must leave the other columns alone.
+const payloadSchema = z
+  .object({
+    profileViews: z.number().int().min(0).max(10_000_000).optional(),
+    postImpressions: z.number().int().min(0).max(100_000_000).optional(),
+    followers: z.number().int().min(0).max(100_000_000).optional(),
+    connections: z.number().int().min(0).max(100_000).optional(),
+    searchAppearances: z.number().int().min(0).max(10_000_000).optional(),
+    /** yyyy-mm-dd. Defaults to today. Cannot be in the future. */
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  })
+  .refine((body) => Object.keys(body).some((field) => field !== "date"), {
+    message: "At least one metric is required",
+  });
 
 // Small in-process limiter. Good enough for a single instance; move to a shared
 // store when this runs on more than one node.

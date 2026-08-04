@@ -41,11 +41,18 @@
       .ok { margin-top: 10px; padding: 8px; border-radius: 6px; background: #ecfdf5; color: #047857; font-size: 13px; }
       .hidden { display: none; }
       a { color: var(--brand); }
+      .section-title { margin: 16px 0 6px; font-size: 11px; font-weight: 600; color: var(--muted); }
+      .log { padding: 6px 0; border-bottom: 1px solid var(--hairline); }
+      .log:last-child { border-bottom: 0; }
+      .log-top { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--muted); }
+      .log-metrics { margin-top: 2px; font-size: 11px; color: var(--ink); font-variant-numeric: tabular-nums; }
+      .tag-ok { font-weight: 600; color: #047857; }
+      .tag-bad { font-weight: 600; color: #b91c1c; }
     </style>
   </head>
   <body>
     <h1>LnkRise</h1>
-    <p class="sub">Reads your own analytics page. Nothing is sent until you confirm.</p>
+    <p class="sub">Logs your numbers whenever you open your own analytics page.</p>
 
     <section id="pair">
       <label for="key">Ingest key</label>
@@ -64,9 +71,16 @@
         <button id="cancel" class="secondary">Cancel</button>
       </div>
       <p class="note">
-        Open your analytics page first —
-        <a href="https://www.linkedin.com/analytics/" target="_blank" rel="noreferrer">linkedin.com/analytics</a>
+        Impressions live on
+        <a href="https://www.linkedin.com/analytics/" target="_blank" rel="noreferrer">/analytics</a>;
+        profile views and search appearances on
+        <a href="https://www.linkedin.com/dashboard/" target="_blank" rel="noreferrer">/dashboard</a>.
+        Open both and each fills in its own numbers.
       </p>
+
+      <p class="section-title">RECENTLY LOGGED</p>
+      <div id="history"></div>
+
       <button id="unpair" class="secondary">Disconnect</button>
     </section>
 

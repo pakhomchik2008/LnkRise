@@ -1,11 +1,13 @@
 /**
- * Popup controller.
+ * Popup controller — the manual read, kept for pages the content script does
+ * not cover and for re-sending after a failure.
  *
- * Two rules enforced here rather than left to convention:
- *  1. Injection only happens on a path that is necessarily the user's own
- *     (/analytics/ or /dashboard/). Someone else's profile can never be read.
- *  2. Nothing is transmitted until the user has seen the exact numbers and
- *     pressed Send. There is no silent background sync.
+ * Injection only happens on a path that is necessarily the user's own
+ * (/analytics/ or /dashboard/). Someone else's profile can never be read.
+ *
+ * Automatic reads happen in content.js and are sent without confirmation, so
+ * this popup shows the recent-sync log: the confirmation step is gone, the
+ * record of what left the machine is not.
  */
 
 const OWN_DATA_PATHS = ["/analytics/", "/dashboard/"];
@@ -17,6 +19,8 @@ const FIELDS = [
   ["connections", "Connections"],
   ["searchAppearances", "Search appearances"],
 ];
+
+const LABEL_BY_FIELD = Object.fromEntries(FIELDS);
 
 const el = (id) => document.getElementById(id);
 let pending = null;
@@ -33,10 +37,42 @@ async function config() {
   return chrome.storage.local.get(["key", "host"]);
 }
 
+function relativeTime(timestamp) {
+  const minutes = Math.round((Date.now() - timestamp) / 60_000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.round(hours / 24)}d ago`;
+}
+
+async function renderHistory() {
+  const { history = [] } = await chrome.storage.local.get(["history"]);
+  const node = el("history");
+
+  if (history.length === 0) {
+    node.innerHTML = `<p class="note">Nothing logged yet. Open your analytics page and it records itself.</p>`;
+    return;
+  }
+
+  node.innerHTML = history
+    .map((entry) => {
+      const metrics = Object.entries(entry.payload)
+        .map(([field, value]) => `${LABEL_BY_FIELD[field] ?? field} ${value.toLocaleString()}`)
+        .join(" · ");
+      const status = entry.ok
+        ? `<span class="tag-ok">sent</span>`
+        : `<span class="tag-bad">${entry.error}</span>`;
+      return `<div class="log"><div class="log-top">${status}<span>${relativeTime(entry.at)}</span></div><div class="log-metrics">${metrics}</div></div>`;
+    })
+    .join("");
+}
+
 async function render() {
   const { key } = await config();
   el("pair").classList.toggle("hidden", Boolean(key));
   el("main").classList.toggle("hidden", !key);
+  if (key) await renderHistory();
 }
 
 el("save").addEventListener("click", async () => {
@@ -53,7 +89,7 @@ el("save").addEventListener("click", async () => {
 });
 
 el("unpair").addEventListener("click", async () => {
-  await chrome.storage.local.remove(["key"]);
+  await chrome.storage.local.remove(["key", "history", "lastFingerprint", "lastFingerprintAt"]);
   await render();
 });
 
@@ -82,7 +118,7 @@ el("read").addEventListener("click", async () => {
   try {
     [injected] = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
-      files: ["reader.js"],
+      files: ["parser.js", "reader.js"],
     });
   } catch {
     return show("error", "Could not read the page. Reload it and try again.", "error");
@@ -116,14 +152,13 @@ el("send").addEventListener("click", async () => {
   if (!pending) return;
 
   const { key, host } = await config();
-  const payload = {
-    profileViews: pending.profileViews ?? 0,
-    postImpressions: pending.postImpressions ?? 0,
-    followers: pending.followers ?? 0,
-    connections: pending.connections ?? 0,
-  };
-  if (typeof pending.searchAppearances === "number") {
-    payload.searchAppearances = pending.searchAppearances;
+
+  // Only send what was actually on the page. Sending 0 for a missing metric
+  // would overwrite a correct value read earlier from a different analytics
+  // page — Profile views only exist on /dashboard/, impressions on /analytics/.
+  const payload = {};
+  for (const [field] of FIELDS) {
+    if (typeof pending[field] === "number") payload[field] = pending[field];
   }
 
   el("send").disabled = true;
@@ -143,9 +178,14 @@ el("send").addEventListener("click", async () => {
       show("error", `Server said ${response.status}.`, "error");
     } else {
       const body = await response.json();
+      const { history = [] } = await chrome.storage.local.get(["history"]);
+      await chrome.storage.local.set({
+        history: [{ at: Date.now(), payload, ok: true }, ...history].slice(0, 5),
+      });
       show("success", `Logged for ${body.date}.`, "ok");
       pending = null;
       el("preview").classList.add("hidden");
+      await renderHistory();
     }
   } catch {
     show("error", "Could not reach the app. Is it running?", "error");
