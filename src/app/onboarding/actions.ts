@@ -9,7 +9,7 @@ import { PLAN_ACCESS } from "@/lib/constants";
 import { labelInspirations } from "@/lib/linkedin/inspirations";
 import { prisma, toJson } from "@/lib/prisma";
 import { toUtcDay } from "@/lib/utils";
-import type { OnboardingAnswers } from "@/types";
+import type { LinkedInProfile, OnboardingAnswers, ProfileAnalysis, Strategy } from "@/types";
 
 const answersSchema = z.object({
   workStatus: z.enum(["working", "studying", "both", "transitioning"]),
@@ -20,11 +20,31 @@ const answersSchema = z.object({
   challenge: z.string().trim().min(2).max(1000),
   timeBudget: z.union([z.literal(15), z.literal(30), z.literal(60)]),
   followUps: z.record(z.string(), z.string().max(1000)).optional(),
+  profile: z
+    .object({
+      headline: z.string().trim().max(220),
+      about: z.string().trim().max(2600),
+      skills: z.array(z.string().trim().max(60)).max(20),
+      experience: z
+        .array(
+          z.object({
+            title: z.string().trim().max(120),
+            company: z.string().trim().max(120),
+          }),
+        )
+        .max(3),
+    })
+    .optional(),
 });
 
 export type CompleteOnboardingResult =
-  | { ok: true; source: "ai" | "mock" }
+  | { ok: true; source: "ai" | "mock"; analysis: ProfileAnalysis; strategy: Strategy }
   | { ok: false; error: string };
+
+/** Empty strings/arrays mean the user skipped the step — treat as "no profile". */
+function hasProfileContent(profile: NonNullable<OnboardingAnswers["profile"]>): boolean {
+  return Boolean(profile.headline || profile.about || profile.skills.length > 0 || profile.experience.length > 0);
+}
 
 export async function completeOnboarding(input: unknown): Promise<CompleteOnboardingResult> {
   let userId: string;
@@ -42,7 +62,22 @@ export async function completeOnboarding(input: unknown): Promise<CompleteOnboar
   const answers = parsed.data as OnboardingAnswers;
 
   try {
-    const analysis = await analyzeProfile(userId, answers, null);
+    let profile: LinkedInProfile | null = null;
+    if (answers.profile && hasProfileContent(answers.profile)) {
+      const user = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+      profile = {
+        fullName: user?.name ?? "You",
+        headline: answers.profile.headline,
+        about: answers.profile.about || undefined,
+        experience: answers.profile.experience,
+        education: [],
+        skills: answers.profile.skills,
+        source: "manual",
+        fetchedAt: new Date().toISOString(),
+      };
+    }
+
+    const analysis = await analyzeProfile(userId, answers, profile);
     const strategy = await generateStrategy(userId, answers, analysis.value);
     let brief = (await generateDailyBrief(userId, answers, strategy.value, 1, [])).value;
 
@@ -109,7 +144,7 @@ export async function completeOnboarding(input: unknown): Promise<CompleteOnboar
     });
 
     revalidatePath("/dashboard");
-    return { ok: true, source: analysis.source };
+    return { ok: true, source: analysis.source, analysis: analysis.value, strategy: strategy.value };
   } catch (error) {
     console.error("[onboarding] failed to build the plan", error);
     return {

@@ -13,6 +13,19 @@ export type LinkedInGoal =
 
 export type TimeBudget = 15 | 30 | 60;
 
+/**
+ * What the optional manual-profile onboarding step collects. Deliberately
+ * lighter than the full LinkedInProfile shape (one role, not a career
+ * history) — the point is to give the audit real signal in thirty seconds,
+ * not to rebuild a résumé.
+ */
+export interface ManualProfileDraft {
+  headline: string;
+  about: string;
+  skills: string[];
+  experience: LinkedInExperience[];
+}
+
 export interface OnboardingAnswers {
   workStatus: WorkStatus;
   goal: LinkedInGoal;
@@ -23,6 +36,8 @@ export interface OnboardingAnswers {
   timeBudget: TimeBudget;
   /** Answers to adaptive follow-ups, keyed by the question id that triggered them. */
   followUps?: Record<string, string>;
+  /** Set only if the user filled the optional manual-profile step. */
+  profile?: ManualProfileDraft;
 }
 
 export interface ChatMessage {

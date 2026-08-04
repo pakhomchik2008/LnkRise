@@ -7,10 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { OnboardingStep } from "@/lib/onboarding-flow";
 import { cn, parseLinkedInUrl } from "@/lib/utils";
+import type { ManualProfileDraft } from "@/types";
 
 export interface QuestionInputProps {
   step: OnboardingStep;
-  onAnswer: (value: string | string[]) => void;
+  onAnswer: (value: string | string[] | ManualProfileDraft) => void;
 }
 
 const ENTRANCE = { duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] } as const;
@@ -261,6 +262,107 @@ function UrlList({ step, onAnswer }: QuestionInputProps) {
   );
 }
 
+function ProfileForm({ step, onAnswer }: QuestionInputProps) {
+  const [headline, setHeadline] = React.useState("");
+  const [about, setAbout] = React.useState("");
+  const [skills, setSkills] = React.useState("");
+  const [currentTitle, setCurrentTitle] = React.useState("");
+  const [currentCompany, setCurrentCompany] = React.useState("");
+
+  function submit() {
+    const draft: ManualProfileDraft = {
+      headline: headline.trim(),
+      about: about.trim(),
+      skills: skills
+        .split(",")
+        .map((skill) => skill.trim())
+        .filter(Boolean)
+        .slice(0, 20),
+      experience:
+        currentTitle.trim() && currentCompany.trim()
+          ? [{ title: currentTitle.trim(), company: currentCompany.trim() }]
+          : [],
+    };
+
+    onAnswer(draft);
+  }
+
+  function skip() {
+    onAnswer({ headline: "", about: "", skills: [], experience: [] });
+  }
+
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        submit();
+      }}
+      className="space-y-3"
+    >
+      <Input
+        label="Headline"
+        value={headline}
+        onChange={(event) => setHeadline(event.target.value)}
+        placeholder="e.g. Backend engineer focused on payments infrastructure"
+        autoFocus
+      />
+
+      <div>
+        <label
+          htmlFor="onboarding-about"
+          className="mb-1 block text-xs font-medium text-ink-muted"
+        >
+          About section
+        </label>
+        <textarea
+          id="onboarding-about"
+          value={about}
+          onChange={(event) => setAbout(event.target.value)}
+          placeholder="Paste it, or write two or three sentences about what you do"
+          rows={3}
+          className="w-full resize-none rounded-[var(--radius-sm)] border border-hairline bg-surface px-3 py-2.5 text-sm text-ink outline-none transition-colors focus:border-brand-500"
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <Input
+          label="Current role"
+          value={currentTitle}
+          onChange={(event) => setCurrentTitle(event.target.value)}
+          placeholder="Title"
+        />
+        <Input
+          label="Company"
+          value={currentCompany}
+          onChange={(event) => setCurrentCompany(event.target.value)}
+          placeholder="Company"
+        />
+      </div>
+
+      <Input
+        label="Skills"
+        value={skills}
+        onChange={(event) => setSkills(event.target.value)}
+        placeholder="Comma separated — e.g. Python, system design, SQL"
+        hint={step.hint}
+      />
+
+      <div className="flex flex-wrap items-center gap-2 pt-1">
+        <Button type="submit" size="sm">
+          Continue
+        </Button>
+        <button
+          type="button"
+          onClick={skip}
+          className="text-xs font-medium text-ink-muted underline-offset-2 hover:text-ink hover:underline"
+        >
+          Skip this
+        </button>
+      </div>
+    </form>
+  );
+}
+
 export function QuestionInput(props: QuestionInputProps) {
   switch (props.step.kind) {
     case "chips":
@@ -269,6 +371,8 @@ export function QuestionInput(props: QuestionInputProps) {
       return <UrlField {...props} />;
     case "urlList":
       return <UrlList {...props} />;
+    case "profileForm":
+      return <ProfileForm {...props} />;
     default:
       return <FreeText {...props} />;
   }
