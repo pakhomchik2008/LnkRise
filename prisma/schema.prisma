@@ -31,6 +31,7 @@ model User {
   linkedinData   Json? // profile data: fetched via OAuth, or entered by hand
   onboardingData Json? // questionnaire answers
   strategy       Json? // generated strategy
+  connectionPlan Json? // the four outreach lanes; generated once, regenerated on request
   inspirations   String[] @default([]) // profile URLs the user admires
 
   growthScore    Int       @default(0)

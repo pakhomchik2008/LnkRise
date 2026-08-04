@@ -90,6 +90,61 @@ Content openings: ${analysis.contentOpportunities.join(" · ")}
 Set postsPerWeek, commentsPerDay and connectsPerDay to what genuinely fits ${answers.timeBudget} minutes a day.`;
 }
 
+export const connectionPlanSystem = `${HOUSE_STYLE}
+
+Your task: define the four outreach lanes this user should work, one per category.
+
+The four ids are fixed: industry_leaders, peers, clients_recruiters, content_creators. Return exactly one entry for each, in that order. "label" may be renamed to suit the user's goal — "Potential clients" reads better than "People who can say yes" for someone selling — but the id must not change.
+
+Never name a real individual. Describe who to look for; the user does the finding.
+
+"searchQuery" must be a search string the user pastes into the People tab themselves. Use quoted phrases and the AND/OR/NOT operators, which only work inside quotes. Never suggest a tool, script, or export that would automate the search.
+
+"message" is a first-contact note under 300 characters. It must reference something specific about why this category matters to this user's goal, and must not open with generic flattery. Use {name} as the placeholder for the recipient's name.`;
+
+export function connectionPlanPrompt(answers: OnboardingAnswers, strategy: Strategy): string {
+  return `Define the four outreach lanes for this user.
+
+QUESTIONNAIRE
+${answersBlock(answers)}
+
+PLAN
+${strategy.summary}
+Target cadence: ${strategy.connectsPerDay} connection requests a day.`;
+}
+
+export const commentSuggestionsSystem = `${HOUSE_STYLE}
+
+Your task: pick conversations worth joining today.
+
+Describe the kind of post to look for. Never name a real person and never claim to know what anyone posted — you have no access to the feed, and inventing a specific post would send the user looking for something that does not exist.
+
+"starters" must be complete, ready-to-post comments — one to three full sentences each, no ellipsis, no bracketed placeholders. Each must add something: a counter-example, a specific number, a question only someone who has done the work would ask. A comment that could be left on any post in any field is worse than none.
+
+"timeEstimate" is the realistic time to find a matching post and write the comment, phrased like "~4 minutes".`;
+
+export function commentSuggestionsPrompt(
+  answers: OnboardingAnswers,
+  strategy: Strategy,
+  count: number,
+  exclude: string[],
+): string {
+  return `Suggest ${count} conversation${count === 1 ? "" : "s"} to join today.
+
+QUESTIONNAIRE
+${answersBlock(answers)}
+
+PLAN
+${strategy.summary}
+Target cadence: ${strategy.commentsPerDay} comments a day.
+
+${
+  exclude.length > 0
+    ? `ALREADY SUGGESTED TODAY — pick different ground:\n${exclude.map((topic) => `- ${topic}`).join("\n")}`
+    : ""
+}`.trim();
+}
+
 export const dailyBriefSystem = `${HOUSE_STYLE}
 
 Your task: write one day of the plan.

@@ -130,6 +130,37 @@ export interface ConnectSuggestion {
   why: string;
   message: string;
   searchQuery: string;
+  /**
+   * Added in Phase 3. Briefs generated before that have no category, so every
+   * reader must treat this as optional — `categoryOf()` in
+   * lib/ai/connection-strategy.ts resolves the fallback rather than each call
+   * site inventing one.
+   */
+  category?: ConnectionCategoryId;
+}
+
+export type ConnectionCategoryId =
+  | "industry_leaders"
+  | "peers"
+  | "clients_recruiters"
+  | "content_creators";
+
+/**
+ * One outreach lane on the Connections page. `searchQuery` is a LinkedIn
+ * search string the user runs themselves — we never execute it for them.
+ */
+export interface ConnectionCategory {
+  id: ConnectionCategoryId;
+  label: string;
+  lookFor: string;
+  why: string;
+  searchQuery: string;
+  message: string;
+}
+
+export interface ConnectionPlan {
+  categories: ConnectionCategory[];
+  generatedAt: string;
 }
 
 export interface CommentSuggestion {
@@ -153,6 +184,28 @@ export interface DailyBriefContent {
   commentOn: CommentSuggestion[];
   optimizationTip: { title: string; detail: string };
 }
+
+/**
+ * Yesterday's read, shown at the top of today's brief.
+ *
+ * The split exists because task completion is self-reported: a user can tick
+ * every box and still have reached nobody. Only `measured` has real platform
+ * numbers behind it. `unverified` deliberately refuses to present its number
+ * as a result — the UI renders it as a warning, not a score — and `idle` is
+ * the honest answer when there was no work to grade.
+ */
+export type EngagementScore =
+  | {
+      kind: "measured";
+      score: number;
+      tasksDone: number;
+      tasksTotal: number;
+      impressionsDelta: number;
+      /** yyyy-mm-dd of the analytics snapshot the delta came from. */
+      measuredOn: string;
+    }
+  | { kind: "unverified"; score: number; tasksDone: number; tasksTotal: number }
+  | { kind: "idle" };
 
 export type TaskType = "post" | "connect" | "comment" | "optimize" | "engage";
 export type TaskStatus = "pending" | "completed" | "skipped";
