@@ -1,4 +1,11 @@
-import type { DailyBriefContent, TaskPriority, TaskStatus, TaskType } from "@/types";
+import type {
+  CommentSuggestion,
+  DailyBriefContent,
+  EngagementScore,
+  TaskPriority,
+  TaskStatus,
+  TaskType,
+} from "@/types";
 import type { NamedInspiration } from "@/lib/linkedin/inspirations";
 
 export interface NewTask {
@@ -57,25 +64,26 @@ export function tasksFromBrief(brief: DailyBriefContent): NewTask[] {
 }
 
 /**
- * Replaces the first commentOn slots with named people — one of the
- * inspirations the user pointed at during onboarding — instead of a
- * category. Pro-tier only (gated by the caller on PLAN_ACCESS.commentCoaching);
- * trial users keep the category-only brief.
+ * Replaces the leading comment targets with named people — the inspirations
+ * the user gave during onboarding — instead of a topic category. Pro-tier
+ * only, gated by the caller on PLAN_ACCESS.commentCoaching, so trial users
+ * keep the category-only brief.
  *
- * This never touches AI/mock output directly: `person` is attached here,
- * after generation, precisely so the model is never the one asserting a real
- * identity. If it ran inside the prompt instead, a model with no actual
- * knowledge of whether that account posted anything today could confidently
- * invent detail about a real person — this keeps the claim to what we
- * actually know (a URL the user gave us), nothing more.
+ * `person` is attached here, after generation, and never inside a prompt.
+ * A model asked to name someone real has no way to know whether that account
+ * posted anything today and would invent the detail confidently — this keeps
+ * the claim to what we actually know, which is a URL the user supplied.
+ *
+ * This module stays free of the AI provider imports on purpose: it is pure,
+ * so it can be exercised from a plain script and imported from anywhere.
  */
-export function attachRealPeople(
-  brief: DailyBriefContent,
+export function attachRealPeopleToComments(
+  suggestions: CommentSuggestion[],
   inspirations: NamedInspiration[],
-): DailyBriefContent {
-  if (inspirations.length === 0) return brief;
+): CommentSuggestion[] {
+  if (inspirations.length === 0) return suggestions;
 
-  const commentOn = brief.commentOn.map((item, index) => {
+  return suggestions.map((item, index) => {
     const person = inspirations[index];
     if (!person) return item;
 
@@ -86,8 +94,15 @@ export function attachRealPeople(
       person,
     };
   });
+}
 
-  return { ...brief, commentOn };
+/** Brief-level wrapper over {@link attachRealPeopleToComments}. */
+export function attachRealPeople(
+  brief: DailyBriefContent,
+  inspirations: NamedInspiration[],
+): DailyBriefContent {
+  if (inspirations.length === 0) return brief;
+  return { ...brief, commentOn: attachRealPeopleToComments(brief.commentOn, inspirations) };
 }
 
 export interface TaskRef {
@@ -131,6 +146,64 @@ export function briefProgress(groups: BriefTaskGroups): { done: number; total: n
     (task): task is TaskRef => Boolean(task),
   );
   return { done: all.filter((task) => task.done).length, total: all.length };
+}
+
+/**
+ * Grades yesterday, for the line at the top of today's brief.
+ *
+ * Ticking boxes is self-reported and unfalsifiable — someone can complete
+ * every task and reach nobody. So a score built only from task completion is
+ * a measure of effort, not of result, and this deliberately refuses to
+ * present it as the latter: without platform numbers behind it the result is
+ * `unverified`, which the UI renders as a warning rather than a score.
+ *
+ * When impressions for both days are known, the delta between them carries
+ * 40% of the weight. That is the only part of this number that reflects
+ * anything the outside world did.
+ */
+export function engagementScore(input: {
+  tasksDone: number;
+  tasksTotal: number;
+  impressionsYesterday?: number | null;
+  impressionsDayBefore?: number | null;
+  measuredOn?: string | null;
+}): EngagementScore {
+  const { tasksDone, tasksTotal } = input;
+  if (tasksTotal === 0) return { kind: "idle" };
+
+  const completion = tasksDone / tasksTotal;
+  const { impressionsYesterday, impressionsDayBefore, measuredOn } = input;
+
+  const hasBothDays =
+    typeof impressionsYesterday === "number" &&
+    typeof impressionsDayBefore === "number" &&
+    measuredOn != null;
+
+  if (!hasBothDays) {
+    return {
+      kind: "unverified",
+      score: Math.round(completion * 100),
+      tasksDone,
+      tasksTotal,
+    };
+  }
+
+  const delta = impressionsYesterday - impressionsDayBefore;
+
+  // A flat day scores 50 on the reach half, not 0 — posting into a quiet day
+  // is not a failure. ±40% movement is treated as the full range; beyond that
+  // the number stops discriminating usefully.
+  const ratio = impressionsDayBefore > 0 ? delta / impressionsDayBefore : delta > 0 ? 0.4 : 0;
+  const reach = Math.max(0, Math.min(1, 0.5 + ratio / 0.8));
+
+  return {
+    kind: "measured",
+    score: Math.round((completion * 0.6 + reach * 0.4) * 100),
+    tasksDone,
+    tasksTotal,
+    impressionsDelta: delta,
+    measuredOn,
+  };
 }
 
 /**

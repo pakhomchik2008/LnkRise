@@ -111,6 +111,82 @@ export const strategyJsonSchema = {
   additionalProperties: false,
 } as const;
 
+const CONNECTION_CATEGORY_IDS = [
+  "industry_leaders",
+  "peers",
+  "clients_recruiters",
+  "content_creators",
+] as const;
+
+export const connectionPlanSchema = z.object({
+  categories: z
+    .array(
+      z.object({
+        id: z.enum(CONNECTION_CATEGORY_IDS),
+        label: z.string().min(1),
+        lookFor: z.string().min(1),
+        why: z.string().min(1),
+        searchQuery: z.string().min(1),
+        message: z.string().min(1),
+      }),
+    )
+    .length(4),
+});
+
+export const connectionPlanJsonSchema = {
+  type: "object",
+  properties: {
+    categories: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          id: { type: "string", enum: CONNECTION_CATEGORY_IDS },
+          label: { type: "string" },
+          lookFor: { type: "string" },
+          why: { type: "string" },
+          searchQuery: { type: "string" },
+          message: { type: "string" },
+        },
+        required: ["id", "label", "lookFor", "why", "searchQuery", "message"],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ["categories"],
+  additionalProperties: false,
+} as const;
+
+const commentSuggestion = z.object({
+  topic: z.string().min(1),
+  why: z.string().min(1),
+  starters: z.array(z.string().min(1)).min(2).max(3),
+  timeEstimate: z.string().min(1),
+});
+
+const commentSuggestionJson = {
+  type: "object",
+  properties: {
+    topic: { type: "string" },
+    why: { type: "string" },
+    starters: { type: "array", items: { type: "string" } },
+    timeEstimate: { type: "string" },
+  },
+  required: ["topic", "why", "starters", "timeEstimate"],
+  additionalProperties: false,
+} as const;
+
+export const commentSuggestionsSchema = z.object({
+  suggestions: z.array(commentSuggestion).min(1).max(5),
+});
+
+export const commentSuggestionsJsonSchema = {
+  type: "object",
+  properties: { suggestions: { type: "array", items: commentSuggestionJson } },
+  required: ["suggestions"],
+  additionalProperties: false,
+} as const;
+
 export const dailyBriefSchema = z.object({
   todayFocus: z.string().min(1),
   postIdea: z.object({

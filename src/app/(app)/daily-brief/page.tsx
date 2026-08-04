@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { format } from "date-fns";
 import { BriefCards, BriefProgress } from "@/components/dashboard/brief-section";
+import { EngagementScore } from "@/components/dashboard/engagement-score";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireUserId } from "@/lib/auth";
 import { groupTasksByType } from "@/lib/briefs";
+import { yesterdaysEngagement } from "@/lib/engagement";
 import { prisma } from "@/lib/prisma";
 import { toUtcDay } from "@/lib/utils";
 import type { DailyBriefContent, TaskStatus, TaskType } from "@/types";
@@ -25,7 +27,7 @@ export default async function DailyBriefPage() {
 
   if (!user?.onboardedAt) redirect("/onboarding");
 
-  const [brief, tasks, history] = await Promise.all([
+  const [brief, tasks, history, engagement] = await Promise.all([
     prisma.dailyBrief.findUnique({
       where: { userId_date: { userId, date: today } },
       select: { content: true },
@@ -40,6 +42,7 @@ export default async function DailyBriefPage() {
       take: 7,
       select: { id: true, date: true, content: true, completed: true },
     }),
+    yesterdaysEngagement(userId, today),
   ]);
 
   const content = (brief?.content ?? undefined) as unknown as DailyBriefContent | undefined;
@@ -61,6 +64,8 @@ export default async function DailyBriefPage() {
           {content ? ` · ${content.todayFocus}` : ""}
         </p>
       </header>
+
+      <EngagementScore value={engagement} />
 
       {content ? (
         <>
