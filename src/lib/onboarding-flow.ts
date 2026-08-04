@@ -13,11 +13,12 @@ export type StepId =
   | "goalDetail"
   | "industry"
   | "linkedinUrl"
+  | "profile"
   | "inspirations"
   | "challenge"
   | "timeBudget";
 
-export type StepKind = "chips" | "text" | "url" | "urlList";
+export type StepKind = "chips" | "text" | "url" | "urlList" | "profileForm";
 
 export interface ChipOption {
   value: string;
@@ -107,6 +108,14 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     optional: true,
   },
   {
+    id: "profile",
+    kind: "profileForm",
+    question:
+      "One more optional thing: tell me your headline, About section and a couple of skills, and the audit gets a lot sharper. Thirty seconds, or skip it and I will read from your answers alone.",
+    hint: "We do not scrape or sign in as you — this is quicker to type than to explain why we can't fetch it automatically.",
+    optional: true,
+  },
+  {
     id: "inspirations",
     kind: "urlList",
     question:
@@ -150,6 +159,8 @@ export function acknowledgement(step: StepId, value: string): string | null {
       return `${value} — good. I will keep everything inside that.`;
     case "linkedinUrl":
       return value ? "Got it." : "No problem — I will work from your answers instead.";
+    case "profile":
+      return value ? "That helps a lot — the audit will be specific, not generic." : null;
     case "inspirations":
       return value ? "Useful. I will read those as a direction, not a template." : null;
     case "challenge":
