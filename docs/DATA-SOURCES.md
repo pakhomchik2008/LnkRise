@@ -74,10 +74,19 @@ generated in Settings.
 
 There are two read paths, both driven by the user opening a page themselves:
 
-- **Automatic.** `content.js` runs on `/analytics/*` and `/dashboard/*` and
-  records what is on screen without a click.
+- **Automatic.** `content.js` runs on `/analytics/*`, `/dashboard/*` and
+  `/mynetwork/*` and records what is on screen without a click.
 - **Manual.** The popup's "Read this page" button, kept for re-sending after a
   failure. Uses `activeTab` + `scripting`.
+
+The three pages exist because no single LinkedIn page shows all five numbers.
+Verified against the live DOM (2026-08-04):
+
+| Page              | Metrics found                                        |
+| ----------------- | ----------------------------------------------------- |
+| `/dashboard/`      | Profile viewers, Post impressions, Total followers, Search appearances |
+| `/analytics/creator/content/` | Impressions (a second source for the same number) |
+| `/mynetwork/`       | Connections — the only page it appears on |
 
 Constraints enforced in code, not by convention:
 
@@ -85,8 +94,9 @@ Constraints enforced in code, not by convention:
   scheduled fetches. LinkedIn is touched only as a consequence of the user
   going there. This is the line between reading a page you opened and
   automated access, which the User Agreement prohibits outright.
-- **Own pages only.** The content script matches `/analytics/*` and
-  `/dashboard/*`; `popup.js` applies the same check before injecting. Another
+- **Own pages only.** The content script matches `/analytics/*`,
+  `/dashboard/*` and `/mynetwork/*`; `popup.js` applies the same check before
+  injecting. All three are inherently the signed-in member's own — another
   member's profile cannot be read on either path.
 - **Read-only.** No clicks, no form submission, no posting.
 - **The ingest key never enters a linkedin.com tab.** `content.js` hands values
@@ -96,12 +106,25 @@ Constraints enforced in code, not by convention:
   record of what left the machine.
 
 The parser (`parser.js`, shared by both paths) matches on visible label text
-because the analytics DOM has no stable identifiers. Label matching is exact and
-numbers are taken only from an adjacent element that is nothing but a number —
-substring matching previously hit the Discovery card's caption "In-network
-(followers and connections)" and returned that card's impressions count for
-every metric. It returns nothing when the layout changes, by design, since
-returning wrong numbers is worse. The manual form is the fallback.
+because the analytics DOM has no stable identifiers. Two bugs shipped in the
+first version, both found by reading the live DOM rather than guessing:
+
+1. **Substring matching.** `"followers"` matched inside the Discovery card's
+   caption "In-network (followers and connections)", and the code then read
+   that card's headline impressions number for every metric — three different
+   metrics all came back as the same value. Fixed by requiring the label node's
+   own text to *start with* the needle, and taking the number only from an
+   element that is nothing but a number, immediately adjacent to the label.
+2. **Exact-match labels.** The actual `/dashboard/` copy is "Profile viewers
+   in 90 days", "Post impressions in 7 days", "Search appearances Jul 21–27" —
+   never the bare word. Exact string equality against `"profile viewers"` etc.
+   never matched, so those three fields silently stayed null. Fixed by
+   switching to prefix matching, which tolerates the trailing date qualifier
+   without opening the door back up to the caption bug — "In-network
+   (followers…" still doesn't *start with* "followers".
+
+It returns nothing when the layout changes, by design, since returning wrong
+numbers is worse. The manual form is the fallback.
 
 Every metric on `/api/ingest/analytics` is optional and absent means unknown, not
 zero. The numbers are split across two pages — impressions on `/analytics/`,
