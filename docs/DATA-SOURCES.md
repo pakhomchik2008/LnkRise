@@ -72,20 +72,42 @@ Reads the numbers the platform is already displaying to the signed-in member
 about themselves and POSTs them to `/api/ingest/analytics` with an ingest key
 generated in Settings.
 
+There are two read paths, both driven by the user opening a page themselves:
+
+- **Automatic.** `content.js` runs on `/analytics/*` and `/dashboard/*` and
+  records what is on screen without a click.
+- **Manual.** The popup's "Read this page" button, kept for re-sending after a
+  failure. Uses `activeTab` + `scripting`.
+
 Constraints enforced in code, not by convention:
 
-- **No persistent content script.** Nothing runs on the site until the user
-  clicks the toolbar button; injection uses `activeTab` + `scripting`.
-- **Own pages only.** `popup.js` refuses to inject unless the path starts with
-  `/analytics/` or `/dashboard/`. Another member's profile cannot be read.
-- **Read-only.** No clicks, no navigation, no form submission, no posting.
-- **Confirmation before transmission.** The extracted numbers are shown in the
-  popup; nothing leaves the browser until the user presses Send.
-- **No background sync.** There is no alarm, no polling, no service worker loop.
+- **The extension never navigates.** No alarms, no background tab opening, no
+  scheduled fetches. LinkedIn is touched only as a consequence of the user
+  going there. This is the line between reading a page you opened and
+  automated access, which the User Agreement prohibits outright.
+- **Own pages only.** The content script matches `/analytics/*` and
+  `/dashboard/*`; `popup.js` applies the same check before injecting. Another
+  member's profile cannot be read on either path.
+- **Read-only.** No clicks, no form submission, no posting.
+- **The ingest key never enters a linkedin.com tab.** `content.js` hands values
+  to the service worker, which holds the key and makes the request.
+- **Sending is silent but logged.** The popup shows the last five syncs with
+  their exact values. Automatic reads removed the confirmation step, not the
+  record of what left the machine.
 
-The parser matches on visible label text because the analytics DOM has no stable
-identifiers. It will return nothing when the layout changes — by design, since
+The parser (`parser.js`, shared by both paths) matches on visible label text
+because the analytics DOM has no stable identifiers. Label matching is exact and
+numbers are taken only from an adjacent element that is nothing but a number —
+substring matching previously hit the Discovery card's caption "In-network
+(followers and connections)" and returned that card's impressions count for
+every metric. It returns nothing when the layout changes, by design, since
 returning wrong numbers is worse. The manual form is the fallback.
+
+Every metric on `/api/ingest/analytics` is optional and absent means unknown, not
+zero. The numbers are split across two pages — impressions on `/analytics/`,
+profile views and search appearances on `/dashboard/` — so a partial payload
+must merge into the day's row rather than overwrite the columns it does not
+carry.
 
 **Terms of service.** Reading page content with a script sits in a grey area of
 most platforms' terms even when it is the user's own data on their own screen.
