@@ -10,7 +10,7 @@
  * record of what left the machine is not.
  */
 
-const OWN_DATA_PATHS = ["/analytics/", "/dashboard/"];
+const OWN_DATA_PATHS = ["/analytics/", "/dashboard/", "/mynetwork/"];
 
 const FIELDS = [
   ["profileViews", "Profile views"],
@@ -109,7 +109,7 @@ el("read").addEventListener("click", async () => {
   if (!OWN_DATA_PATHS.some((allowed) => path.startsWith(allowed))) {
     return show(
       "error",
-      "This only reads /analytics/ and /dashboard/ — pages that are always your own.",
+      "This only reads /analytics/, /dashboard/ and /mynetwork/ — pages that are always your own.",
       "error",
     );
   }

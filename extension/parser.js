@@ -48,16 +48,20 @@ globalThis.lnkriseReadAnalytics = (() => {
   }
 
   /**
-   * True when this element is exactly the label and nothing else.
+   * True when this element's text is the label, optionally with a trailing
+   * qualifier LinkedIn appends — "Profile viewers in 90 days", "Post
+   * impressions in 7 days", "Search appearances Jul 21–27" are all real label
+   * text on /dashboard/, not just the bare word.
    *
-   * Substring matching used to hit the Discovery card's caption
-   * "In-network (followers and connections)" and then take that card's headline
-   * impressions count, so every metric came back as the same number.
+   * Matching is prefix-based rather than substring: "In-network (followers and
+   * connections)" does not start with "followers", so it can't hit here the
+   * way substring matching once did — that bug took the Discovery card's
+   * headline impressions count for every metric.
    */
   function isLabelNode(node, needles) {
     const text = normalize(node.textContent).toLowerCase().replace(/[:·|]+$/, "").trim();
-    if (text.length > 30) return false;
-    return needles.includes(text);
+    if (text.length > 45) return false;
+    return needles.some((needle) => text.startsWith(needle));
   }
 
   /**

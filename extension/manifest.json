@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "LnkRise — log my numbers",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Reads the numbers on your own analytics page and logs them to your LnkRise account. Read-only, and only on pages you open yourself.",
   "permissions": ["activeTab", "scripting", "storage"],
   "host_permissions": ["http://localhost:3000/*", "https://*.lnkrise.app/*"],
@@ -10,7 +10,11 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://www.linkedin.com/analytics/*", "https://www.linkedin.com/dashboard/*"],
+      "matches": [
+        "https://www.linkedin.com/analytics/*",
+        "https://www.linkedin.com/dashboard/*",
+        "https://www.linkedin.com/mynetwork/*"
+      ],
       "js": ["parser.js", "content.js"],
       "run_at": "document_idle"
     }
