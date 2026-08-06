@@ -157,6 +157,81 @@ export const connectionPlanJsonSchema = {
   additionalProperties: false,
 } as const;
 
+export const postConceptsSchema = z.object({
+  concepts: z
+    .array(
+      z.object({
+        topic: z.string().min(1),
+        angle: z.string().min(1),
+        why: z.string().min(1),
+      }),
+    )
+    .min(3)
+    .max(5),
+});
+
+export const postConceptsJsonSchema = {
+  type: "object",
+  properties: {
+    concepts: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          topic: { type: "string" },
+          angle: { type: "string" },
+          why: { type: "string" },
+        },
+        required: ["topic", "angle", "why"],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ["concepts"],
+  additionalProperties: false,
+} as const;
+
+export const postOutlineSchema = z.object({
+  topic: z.string().min(1),
+  hook: z.string().min(1),
+  points: z.array(z.string().min(1)).min(2).max(6),
+  cta: z.string().min(1),
+});
+
+export const postOutlineJsonSchema = {
+  type: "object",
+  properties: {
+    topic: { type: "string" },
+    hook: { type: "string" },
+    points: { type: "array", items: { type: "string" } },
+    cta: { type: "string" },
+  },
+  required: ["topic", "hook", "points", "cta"],
+  additionalProperties: false,
+} as const;
+
+export const postDraftSchema = z.object({
+  draft: z.string().min(1).max(3000),
+});
+
+export const postDraftJsonSchema = {
+  type: "object",
+  properties: { draft: { type: "string" } },
+  required: ["draft"],
+  additionalProperties: false,
+} as const;
+
+export const rewriteSchema = z.object({
+  alternatives: z.array(z.string().min(1)).min(1).max(3),
+});
+
+export const rewriteJsonSchema = {
+  type: "object",
+  properties: { alternatives: { type: "array", items: { type: "string" } } },
+  required: ["alternatives"],
+  additionalProperties: false,
+} as const;
+
 const commentSuggestion = z.object({
   topic: z.string().min(1),
   why: z.string().min(1),

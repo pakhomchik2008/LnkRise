@@ -7,6 +7,7 @@ import type {
 } from "@/types";
 import { seededRandom } from "@/lib/utils";
 import { GOAL_PROFILES, HOOK_TEMPLATES, OPTIMIZATION_TIPS } from "./banks";
+import { templateVars } from "./vars";
 
 /**
  * Deterministic stand-in for the AI layer. Same seed in, same coaching out —
@@ -49,7 +50,7 @@ export function mockProfileAnalysis({ seed, answers, profile }: MockInput): Prof
   const random = seededRandom(`${seed}:analysis`);
   const goal = GOAL_PROFILES[answers.goal];
   const industry = answers.industry || "your field";
-  const vars = { industry, topic: industry.toLowerCase() };
+  const vars = templateVars(answers.industry);
 
   const hasAbout = Boolean(profile?.about && profile.about.length > 120);
   const hasSkills = (profile?.skills.length ?? 0) >= 5;
@@ -192,7 +193,7 @@ export function mockDailyBrief({ seed, answers }: MockInput & { day?: string }):
   const random = seededRandom(`${seed}:brief:${day}`);
   const goal = GOAL_PROFILES[answers.goal];
   const industry = answers.industry || "your field";
-  const vars = { industry, topic: industry.toLowerCase(), name: "{name}" };
+  const vars = templateVars(answers.industry);
 
   const angle = fill(pick(goal.postAngles, random), vars);
   const hook = fill(pick(HOOK_TEMPLATES, random), vars);

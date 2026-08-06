@@ -60,6 +60,7 @@ model User {
   accounts     Account[]
   sessions     Session[]
   apiKeys      ApiKey[]
+  aiUsage      AiUsage[]
 }
 
 model Account {
@@ -129,6 +130,23 @@ model DailyBrief {
 
   user  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   tasks CoachingTask[]
+
+  @@unique([userId, date])
+  @@index([userId, date(sort: Desc)])
+}
+
+/// Per-day AI generation counter, enforcing PLAN_ACCESS.aiGenerationsPerDay.
+/// A row per user per calendar day rather than a running total, so the limit
+/// resets without a cleanup job. Same @db.Date + composite-unique shape as
+/// DailyBrief, for the same reason: a plain DateTime would make "today"
+/// unique per microsecond and every increment would insert a new row.
+model AiUsage {
+  id          String   @id @default(cuid())
+  userId      String
+  date        DateTime @db.Date
+  generations Int      @default(0)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, date])
   @@index([userId, date(sort: Desc)])

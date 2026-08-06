@@ -1,6 +1,7 @@
 import type { CommentSuggestion, OnboardingAnswers, Strategy } from "@/types";
 import { seededRandom } from "@/lib/utils";
 import { GOAL_PROFILES } from "./mock/banks";
+import { templateVars } from "./mock/vars";
 import { commentSuggestionsPrompt, commentSuggestionsSystem } from "./prompts";
 import { generateJson, withFallback } from "./provider";
 import { commentSuggestionsJsonSchema, commentSuggestionsSchema } from "./schemas";
@@ -36,8 +37,7 @@ export function mockCommentSuggestions(
 ): CommentSuggestion[] {
   const random = seededRandom(seed);
   const goal = GOAL_PROFILES[answers.goal];
-  const industry = answers.industry || "your field";
-  const vars = { industry, topic: industry.toLowerCase() };
+  const vars = templateVars(answers.industry);
 
   return pickMany(goal.commentAngles, Math.min(count, goal.commentAngles.length), random).map(
     (item) => ({
