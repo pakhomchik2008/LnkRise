@@ -113,6 +113,111 @@ ${strategy.summary}
 Target cadence: ${strategy.connectsPerDay} connection requests a day.`;
 }
 
+const PLAIN_TEXT_RULE = `The platform renders post bodies as plain text. No markdown, no headings, no bullet characters beyond a plain dash, no bold or italic — any markup you emit is shown to the reader literally. Paragraph breaks are the only formatting available, and short paragraphs read better than long ones.`;
+
+export const postConceptsSystem = `${HOUSE_STYLE}
+
+Your task: propose post concepts the user is uniquely placed to write.
+
+Each concept must depend on something only this user knows — their field, their stated challenge, the work they have actually done. A concept that any account in their industry could publish is a failed concept.
+
+"why" explains why this one is worth their time, in terms of their stated goal. Do not invent engagement statistics, do not claim a topic performs a given number of times better, and do not refer to platform data you do not have. You are reasoning from their situation, not from measurements.`;
+
+export function postConceptsPrompt(
+  answers: OnboardingAnswers,
+  strategy: Strategy,
+  recentTopics: string[],
+): string {
+  return `Propose post concepts for this user.
+
+QUESTIONNAIRE
+${answersBlock(answers)}
+
+PLAN
+${strategy.summary}
+
+${
+  recentTopics.length > 0
+    ? `ALREADY WRITTEN — do not repeat these:\n${recentTopics.map((topic) => `- ${topic}`).join("\n")}`
+    : "They have not published through us yet. Favour a concept that is easy to start."
+}`;
+}
+
+export const postOutlineSystem = `${HOUSE_STYLE}
+
+Your task: turn one concept into an outline the user can approve or edit before anything is written.
+
+The outline is the argument, not the prose. Each point is one claim in the order it should land. The hook is the literal first line of the post. The CTA is the literal last line.`;
+
+export function postOutlinePrompt(
+  answers: OnboardingAnswers,
+  concept: { topic: string; angle: string },
+): string {
+  return `Outline this post.
+
+CONCEPT
+Topic: ${concept.topic}
+Angle: ${concept.angle}
+
+QUESTIONNAIRE
+${answersBlock(answers)}`;
+}
+
+export const postDraftSystem = `${HOUSE_STYLE}
+
+Your task: write the post, following the outline exactly.
+
+${PLAIN_TEXT_RULE}
+
+The first two lines decide whether anyone reads the rest — they are shown before the "see more" fold. Do not spend them on preamble.
+
+Aim for 900-1300 characters. Write as the user, in first person. Never mention that this was generated, and never include placeholder brackets — the draft must be publishable exactly as written.`;
+
+export function postDraftPrompt(
+  answers: OnboardingAnswers,
+  outline: { topic: string; hook: string; points: string[]; cta: string },
+): string {
+  return `Write this post.
+
+OUTLINE
+Topic: ${outline.topic}
+Opening line: ${outline.hook}
+Points, in order:
+${outline.points.map((point) => `- ${point}`).join("\n")}
+Closing line: ${outline.cta}
+
+QUESTIONNAIRE
+${answersBlock(answers)}`;
+}
+
+export const rewriteSystem = `${HOUSE_STYLE}
+
+Your task: rewrite one passage of a draft, returning alternatives the user picks between.
+
+${PLAIN_TEXT_RULE}
+
+Rewrite only the passage given. Match the surrounding voice — the alternatives have to drop into the draft without the seam showing. Keep every concrete detail: names, numbers and specifics are what make the passage the user's own, and losing them to make the prose smoother makes the post worse.
+
+Return genuinely different options, not three rephrasings of the same sentence.`;
+
+export function rewritePrompt(mode: string, passage: string, fullDraft: string): string {
+  const instruction: Record<string, string> = {
+    rewrite: "Rewrite it. Same length, same point, better execution.",
+    shorten: "Cut it down. Same point, fewer words, nothing concrete lost.",
+    expand: "Develop it further — add reasoning or a specific example. Do not pad.",
+    bolder: "Make the claim sharper and more arguable. Hedging out, position in.",
+    warmer: "Make it warmer and more human. Less declarative, more direct address.",
+  };
+
+  return `${instruction[mode] ?? instruction.rewrite}
+
+PASSAGE TO REWRITE
+${passage}
+
+THE FULL DRAFT, for voice and context — do not rewrite any of this:
+${fullDraft}`;
+}
+
 export const commentSuggestionsSystem = `${HOUSE_STYLE}
 
 Your task: pick conversations worth joining today.

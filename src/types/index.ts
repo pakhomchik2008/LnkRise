@@ -207,6 +207,58 @@ export type EngagementScore =
   | { kind: "unverified"; score: number; tasksDone: number; tasksTotal: number }
   | { kind: "idle" };
 
+// ---------------------------------------------------------------------------
+// Content
+// ---------------------------------------------------------------------------
+
+export type PostVerdict = "empty" | "short" | "good" | "long" | "over_limit";
+
+export interface PostAnalysis {
+  characters: number;
+  words: number;
+  readSeconds: number;
+  /** 0-10, structural only — see lib/post-analysis.ts on what it cannot judge. */
+  hookScore: number;
+  hookNote: string;
+  hasCta: boolean;
+  ctaNote: string;
+  verdict: PostVerdict;
+  lengthNote: string;
+  aboveFold: { desktop: string; mobile: string };
+  foldedDesktop: boolean;
+  foldedMobile: boolean;
+}
+
+/** One suggestion in the "Generate ideas" step, before any drafting happens. */
+export interface PostConcept {
+  topic: string;
+  angle: string;
+  why: string;
+}
+
+export interface PostOutline {
+  topic: string;
+  hook: string;
+  points: string[];
+  cta: string;
+}
+
+export type RewriteMode = "rewrite" | "shorten" | "expand" | "bolder" | "warmer";
+
+export type PostStatus = "draft" | "scheduled" | "published";
+
+export interface PostSummary {
+  id: string;
+  title: string | null;
+  content: string;
+  status: PostStatus;
+  scheduledAt: string | null;
+  publishedAt: string | null;
+  createdAt: string;
+  aiGenerated: boolean;
+  metrics: { views?: number; likes?: number; comments?: number; shares?: number } | null;
+}
+
 export type TaskType = "post" | "connect" | "comment" | "optimize" | "engage";
 export type TaskStatus = "pending" | "completed" | "skipped";
 export type TaskPriority = "high" | "medium" | "low";

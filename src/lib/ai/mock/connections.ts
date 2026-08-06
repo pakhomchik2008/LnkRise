@@ -5,6 +5,7 @@ import type {
   LinkedInGoal,
   OnboardingAnswers,
 } from "@/types";
+import { templateVars } from "./vars";
 
 /**
  * Source material for the connection strategy engine.
@@ -199,11 +200,7 @@ function fill(template: string, vars: Record<string, string>): string {
  * mock impossible to exercise from a plain script.
  */
 export function mockConnectionPlan(answers: OnboardingAnswers): ConnectionPlan {
-  const industry = answers.industry || "your field";
-
-  // {name} is left intact on purpose: it is a placeholder the user replaces
-  // with the recipient's name, not one we fill.
-  const vars = { industry, topic: industry.toLowerCase(), name: "{name}" };
+  const vars = templateVars(answers.industry);
 
   return {
     categories: CONNECTION_CATEGORY_ORDER.map((id) => {
