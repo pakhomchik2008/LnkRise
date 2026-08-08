@@ -4,6 +4,7 @@ import {
   TIME_BUDGET_OPTIONS,
   WORK_STATUS_OPTIONS,
 } from "@/lib/constants";
+import { nextQuestions } from "@/lib/facts";
 import type { OnboardingAnswers } from "@/types";
 
 export type StepId =
@@ -16,6 +17,9 @@ export type StepId =
   | "profile"
   | "inspirations"
   | "challenge"
+  | "fact1"
+  | "fact2"
+  | "fact3"
   | "timeBudget";
 
 export type StepKind = "chips" | "text" | "url" | "urlList" | "profileForm";
@@ -129,6 +133,23 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     question: "What is the part you are stuck on? Say it plainly — vague answers get vague plans.",
     placeholder: "e.g. I write drafts and never publish them",
   },
+  // Three concrete facts, asked as questions rather than as a form.
+  //
+  // Without these the whole generator runs on a goal enum plus an industry
+  // string, and produces posts anyone in that industry could have written.
+  // Three is the compromise: enough that the first brief has something real
+  // in it, few enough that onboarding stays around three minutes. The rest of
+  // the bank is filled in later, on the Story bank page.
+  ...([0, 1, 2] as const).map((index) => ({
+    id: `fact${index + 1}` as StepId,
+    kind: "text" as StepKind,
+    question: "Tell me something specific about your work.",
+    dynamicQuestion: (draft: Partial<OnboardingAnswers>) =>
+      factQuestionFor(draft, index)?.question ?? "Tell me something specific about your work.",
+    hint: "Your own words. Specifics beat polish — a number, a date, a thing that broke.",
+    placeholder: "A few sentences is plenty",
+    optional: true,
+  })),
   {
     id: "timeBudget",
     kind: "chips",
@@ -141,6 +162,18 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     })),
   },
 ];
+
+/**
+ * The fact question for a given onboarding slot.
+ *
+ * Resolved from the draft rather than fixed up front, because the questions
+ * are chosen by goal and phrased with the user's own industry — neither of
+ * which is known until several steps earlier in the same flow.
+ */
+export function factQuestionFor(draft: Partial<OnboardingAnswers>, index: number) {
+  if (!draft.goal) return null;
+  return nextQuestions(draft.goal, draft.industry ?? "", [], 3)[index] ?? null;
+}
 
 export function visibleSteps(draft: Partial<OnboardingAnswers>): OnboardingStep[] {
   return ONBOARDING_STEPS.filter((step) => !step.showIf || step.showIf(draft));

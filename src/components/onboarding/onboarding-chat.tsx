@@ -7,7 +7,12 @@ import { Logo } from "@/components/shared/logo";
 import { ChatBubble } from "@/components/ui/chat-bubble";
 import { TypingIndicator } from "@/components/ui/typing-indicator";
 import { completeOnboarding } from "@/app/onboarding/actions";
-import { acknowledgement, visibleSteps, type OnboardingStep } from "@/lib/onboarding-flow";
+import {
+  acknowledgement,
+  factQuestionFor,
+  visibleSteps,
+  type OnboardingStep,
+} from "@/lib/onboarding-flow";
 import { useOnboardingStore } from "@/stores/onboarding";
 import type { ChatMessage, ManualProfileDraft, OnboardingAnswers, ProfileAnalysis, Strategy } from "@/types";
 import { cn, sleep } from "@/lib/utils";
@@ -130,6 +135,23 @@ export function OnboardingChat() {
       case "timeBudget":
         setAnswer("timeBudget", Number(value) as 15 | 30 | 60);
         break;
+      case "fact1":
+      case "fact2":
+      case "fact3": {
+        // Stored with the question that produced it: the answer on its own
+        // ("about six weeks, and we lost the contract") is unusable later
+        // without knowing what was asked.
+        const index = Number(step.id.slice(-1)) - 1;
+        const asked = factQuestionFor(draft, index);
+        const body = String(value).trim();
+        if (asked && body.length > 0) {
+          setAnswer("facts", [
+            ...(draft.facts ?? []).filter((fact) => fact.question !== asked.question),
+            { question: asked.question, body, kind: asked.kind },
+          ] as never);
+        }
+        break;
+      }
       default:
         setAnswer(step.id as keyof OnboardingAnswers, value as never);
     }

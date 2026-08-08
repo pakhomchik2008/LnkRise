@@ -1,4 +1,4 @@
-import type { CommentSuggestion, OnboardingAnswers, Strategy } from "@/types";
+import type { CommentSuggestion, OnboardingAnswers, Strategy, UserFact } from "@/types";
 import { seededRandom } from "@/lib/utils";
 import { GOAL_PROFILES } from "./mock/banks";
 import { templateVars } from "./mock/vars";
@@ -53,16 +53,17 @@ export async function generateCommentSuggestions(
   seed: string,
   answers: OnboardingAnswers,
   strategy: Strategy,
-  options: { count?: number; exclude?: string[] } = {},
+  options: { count?: number; exclude?: string[]; facts?: UserFact[] } = {},
 ): Promise<AiResult<CommentSuggestion[]>> {
   const count = options.count ?? 3;
   const exclude = options.exclude ?? [];
+  const facts = options.facts ?? [];
 
   return withFallback(
     async () => {
       const parsed = await generateJson({
         system: commentSuggestionsSystem,
-        prompt: commentSuggestionsPrompt(answers, strategy, count, exclude),
+        prompt: commentSuggestionsPrompt(answers, strategy, count, exclude, facts),
         jsonSchema: commentSuggestionsJsonSchema,
         validator: commentSuggestionsSchema,
         effort: "low",

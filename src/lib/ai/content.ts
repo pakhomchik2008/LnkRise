@@ -4,6 +4,7 @@ import type {
   PostOutline,
   RewriteMode,
   Strategy,
+  UserFact,
 } from "@/types";
 import { mockConcepts, mockDraft, mockOutline, mockRewrite } from "./mock/content";
 import {
@@ -44,12 +45,13 @@ export async function generateConcepts(
   strategy: Strategy,
   recentTopics: string[] = [],
   count = 4,
+  facts: UserFact[] = [],
 ): Promise<AiResult<PostConcept[]>> {
   return withFallback(
     async () => {
       const parsed = await generateJson({
         system: postConceptsSystem,
-        prompt: postConceptsPrompt(answers, strategy, recentTopics),
+        prompt: postConceptsPrompt(answers, strategy, recentTopics, facts),
         jsonSchema: postConceptsJsonSchema,
         validator: postConceptsSchema,
         effort: "medium",
@@ -64,12 +66,13 @@ export async function generateOutline(
   seed: string,
   answers: OnboardingAnswers,
   concept: { topic: string; angle: string },
+  facts: UserFact[] = [],
 ): Promise<AiResult<PostOutline>> {
   return withFallback(
     () =>
       generateJson({
         system: postOutlineSystem,
-        prompt: postOutlinePrompt(answers, concept),
+        prompt: postOutlinePrompt(answers, concept, facts),
         jsonSchema: postOutlineJsonSchema,
         validator: postOutlineSchema,
         effort: "low",
@@ -81,12 +84,13 @@ export async function generateOutline(
 export async function generateDraft(
   answers: OnboardingAnswers,
   outline: PostOutline,
+  facts: UserFact[] = [],
 ): Promise<AiResult<string>> {
   return withFallback(
     async () => {
       const parsed = await generateJson({
         system: postDraftSystem,
-        prompt: postDraftPrompt(answers, outline),
+        prompt: postDraftPrompt(answers, outline, facts),
         jsonSchema: postDraftJsonSchema,
         validator: postDraftSchema,
         maxTokens: 4000,

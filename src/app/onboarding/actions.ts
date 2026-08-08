@@ -6,6 +6,7 @@ import { analyzeProfile, generateDailyBrief, generateStrategy } from "@/lib/ai";
 import { requireUserId } from "@/lib/auth";
 import { attachRealPeople, tasksFromBrief } from "@/lib/briefs";
 import { PLAN_ACCESS } from "@/lib/constants";
+import { factsForPrompt } from "@/lib/fact-store";
 import { labelInspirations } from "@/lib/linkedin/inspirations";
 import { prisma, toJson } from "@/lib/prisma";
 import { toUtcDay } from "@/lib/utils";
@@ -34,6 +35,16 @@ const answersSchema = z.object({
         )
         .max(3),
     })
+    .optional(),
+  facts: z
+    .array(
+      z.object({
+        question: z.string().trim().min(1).max(500),
+        body: z.string().trim().min(1).max(4000),
+        kind: z.string().trim().max(40),
+      }),
+    )
+    .max(10)
     .optional(),
 });
 
@@ -77,9 +88,32 @@ export async function completeOnboarding(input: unknown): Promise<CompleteOnboar
       };
     }
 
-    const analysis = await analyzeProfile(userId, answers, profile);
-    const strategy = await generateStrategy(userId, answers, analysis.value);
-    let brief = (await generateDailyBrief(userId, answers, strategy.value, 1, [])).value;
+    // Facts are written before any generation, so the very first audit,
+    // strategy and brief are built from the user's own specifics rather than
+    // from their industry string alone.
+    const collected = (answers.facts ?? []).filter((fact) => fact.body.trim().length > 0);
+    if (collected.length > 0) {
+      // deleteMany first so re-running onboarding replaces its own facts
+      // instead of duplicating them. Scoped to the questions asked here, to
+      // leave anything added later on the Story bank page untouched.
+      await prisma.fact.deleteMany({
+        where: { userId, question: { in: collected.map((fact) => fact.question) } },
+      });
+      await prisma.fact.createMany({
+        data: collected.map((fact) => ({
+          userId,
+          question: fact.question,
+          body: fact.body.trim(),
+          kind: fact.kind,
+        })),
+      });
+    }
+
+    const facts = await factsForPrompt(userId);
+
+    const analysis = await analyzeProfile(userId, answers, profile, facts);
+    const strategy = await generateStrategy(userId, answers, analysis.value, facts);
+    let brief = (await generateDailyBrief(userId, answers, strategy.value, 1, [], facts)).value;
 
     // Named people (the inspirations named during onboarding) are a
     // commentCoaching-gated feature — trial does not get them. Every

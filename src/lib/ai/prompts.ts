@@ -1,4 +1,4 @@
-import type { LinkedInProfile, OnboardingAnswers, ProfileAnalysis, Strategy } from "@/types";
+import type { LinkedInProfile, OnboardingAnswers, ProfileAnalysis, Strategy, UserFact } from "@/types";
 import { GOAL_PROFILES } from "./mock/banks";
 
 const HOUSE_STYLE = `You are the coaching engine behind LnkRise, a growth coach for professional networking platforms.
@@ -33,6 +33,33 @@ function profileBlock(profile?: LinkedInProfile | null): string {
   ].join("\n");
 }
 
+/**
+ * The specific things this user has done, in their own words.
+ *
+ * This is the block that decides whether output is theirs or generic. Without
+ * it a prompt carries a goal enum, an industry string and one sentence about
+ * a challenge — enough for the model to produce competent writing that anyone
+ * in that industry could have published, and nothing more.
+ *
+ * When it is empty the prompt says so explicitly rather than staying silent.
+ * A model given no specifics and no warning fills the gap with plausible
+ * invention; told the gap exists, it can write around it and avoid implying
+ * experience the user never claimed.
+ */
+function factsBlock(facts: UserFact[]): string {
+  if (facts.length === 0) {
+    return `WHAT THEY HAVE ACTUALLY DONE
+Nothing on record. You have no specific projects, numbers, failures or stories from this person.
+
+Do not invent any. Do not write as though they have experience you cannot see, and do not attribute results, companies or outcomes to them. Keep claims to what the questionnaire above actually supports, and prefer a post built on a question or an observation over one that implies a track record.`;
+  }
+
+  return `WHAT THEY HAVE ACTUALLY DONE
+These are the user's own words, in answer to questions we asked them. This is the only material here that is specific to this person — build on it. Quote details, numbers and names from it rather than inventing new ones, and never contradict it.
+
+${facts.map((fact) => `Q: ${fact.question}\nA: ${fact.body}`).join("\n\n")}`;
+}
+
 function answersBlock(answers: OnboardingAnswers): string {
   const goal = GOAL_PROFILES[answers.goal];
   return [
@@ -58,11 +85,17 @@ export const profileAnalysisSystem = `${HOUSE_STYLE}
 
 Your task: audit a professional profile and score it honestly. Scores are 1-10 per section and 0-100 overall. A profile with an empty About section does not score above 4 on that section — inflated scores make the whole product useless. Every suggestion must be an edit the user could make in under five minutes.`;
 
-export function profileAnalysisPrompt(answers: OnboardingAnswers, profile?: LinkedInProfile | null): string {
+export function profileAnalysisPrompt(
+  answers: OnboardingAnswers,
+  profile: LinkedInProfile | null | undefined,
+  facts: UserFact[],
+): string {
   return `Audit this profile.
 
 QUESTIONNAIRE
 ${answersBlock(answers)}
+
+${factsBlock(facts)}
 
 PROFILE
 ${profileBlock(profile)}
@@ -74,11 +107,17 @@ export const strategySystem = `${HOUSE_STYLE}
 
 Your task: turn an audit plus a stated goal into a four-week plan. The plan must fit inside the user's stated daily time budget — if the numbers do not fit in the time available, lower the numbers. Week 1 is foundation, week 2 momentum, week 3 acceleration, week 4 measurement. Every milestone must be a single action the user can mark as done.`;
 
-export function strategyPrompt(answers: OnboardingAnswers, analysis: ProfileAnalysis): string {
+export function strategyPrompt(
+  answers: OnboardingAnswers,
+  analysis: ProfileAnalysis,
+  facts: UserFact[],
+): string {
   return `Build the four-week plan.
 
 QUESTIONNAIRE
 ${answersBlock(answers)}
+
+${factsBlock(facts)}
 
 AUDIT
 Overall score: ${analysis.overallScore}/100
@@ -102,11 +141,17 @@ Never name a real individual. Describe who to look for; the user does the findin
 
 "message" is a first-contact note under 300 characters. It must reference something specific about why this category matters to this user's goal, and must not open with generic flattery. Use {name} as the placeholder for the recipient's name.`;
 
-export function connectionPlanPrompt(answers: OnboardingAnswers, strategy: Strategy): string {
+export function connectionPlanPrompt(
+  answers: OnboardingAnswers,
+  strategy: Strategy,
+  facts: UserFact[],
+): string {
   return `Define the four outreach lanes for this user.
 
 QUESTIONNAIRE
 ${answersBlock(answers)}
+
+${factsBlock(facts)}
 
 PLAN
 ${strategy.summary}
@@ -127,11 +172,14 @@ export function postConceptsPrompt(
   answers: OnboardingAnswers,
   strategy: Strategy,
   recentTopics: string[],
+  facts: UserFact[],
 ): string {
   return `Propose post concepts for this user.
 
 QUESTIONNAIRE
 ${answersBlock(answers)}
+
+${factsBlock(facts)}
 
 PLAN
 ${strategy.summary}
@@ -152,6 +200,7 @@ The outline is the argument, not the prose. Each point is one claim in the order
 export function postOutlinePrompt(
   answers: OnboardingAnswers,
   concept: { topic: string; angle: string },
+  facts: UserFact[],
 ): string {
   return `Outline this post.
 
@@ -160,7 +209,9 @@ Topic: ${concept.topic}
 Angle: ${concept.angle}
 
 QUESTIONNAIRE
-${answersBlock(answers)}`;
+${answersBlock(answers)}
+
+${factsBlock(facts)}`;
 }
 
 export const postDraftSystem = `${HOUSE_STYLE}
@@ -176,6 +227,7 @@ Aim for 900-1300 characters. Write as the user, in first person. Never mention t
 export function postDraftPrompt(
   answers: OnboardingAnswers,
   outline: { topic: string; hook: string; points: string[]; cta: string },
+  facts: UserFact[],
 ): string {
   return `Write this post.
 
@@ -187,7 +239,9 @@ ${outline.points.map((point) => `- ${point}`).join("\n")}
 Closing line: ${outline.cta}
 
 QUESTIONNAIRE
-${answersBlock(answers)}`;
+${answersBlock(answers)}
+
+${factsBlock(facts)}`;
 }
 
 export const rewriteSystem = `${HOUSE_STYLE}
@@ -245,11 +299,14 @@ export function commentSuggestionsPrompt(
   strategy: Strategy,
   count: number,
   exclude: string[],
+  facts: UserFact[],
 ): string {
   return `Suggest ${count} conversation${count === 1 ? "" : "s"} to join today.
 
 QUESTIONNAIRE
 ${answersBlock(answers)}
+
+${factsBlock(facts)}
 
 PLAN
 ${strategy.summary}
@@ -277,6 +334,7 @@ export function dailyBriefPrompt(
   strategy: Strategy,
   dayNumber: number,
   recentTopics: string[],
+  facts: UserFact[],
 ): string {
   const week = Math.min(4, Math.ceil(dayNumber / 7)) as 1 | 2 | 3 | 4;
   const currentWeek = strategy.weeks.find((entry) => entry.week === week) ?? strategy.weeks[0];
@@ -285,6 +343,8 @@ export function dailyBriefPrompt(
 
 QUESTIONNAIRE
 ${answersBlock(answers)}
+
+${factsBlock(facts)}
 
 PLAN
 ${strategy.summary}

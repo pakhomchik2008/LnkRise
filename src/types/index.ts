@@ -38,6 +38,12 @@ export interface OnboardingAnswers {
   followUps?: Record<string, string>;
   /** Set only if the user filled the optional manual-profile step. */
   profile?: ManualProfileDraft;
+  /**
+   * The concrete facts collected during onboarding, each paired with the
+   * question that drew it out. Written into the Fact table on completion —
+   * this field is the transport, not the store.
+   */
+  facts?: { question: string; body: string; kind: string }[];
 }
 
 export interface ChatMessage {
@@ -206,6 +212,18 @@ export type EngagementScore =
     }
   | { kind: "unverified"; score: number; tasksDone: number; tasksTotal: number }
   | { kind: "idle" };
+
+/**
+ * One concrete thing the user told us about themselves. `body` is verbatim —
+ * it is the only part of a prompt that carries detail a model could not have
+ * invented, so nothing is allowed to paraphrase it on the way in.
+ */
+export interface UserFact {
+  id: string;
+  question: string;
+  body: string;
+  kind: string;
+}
 
 // ---------------------------------------------------------------------------
 // Content
