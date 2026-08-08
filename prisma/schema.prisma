@@ -159,6 +159,11 @@ model Post {
   content     String    @db.Text
   status      String    @default("draft") // draft, scheduled, published
   scheduledAt DateTime?
+  /// Set once the scheduled-posts cron has emailed the "time to post" reminder,
+  /// so a re-run of the cron never sends it twice. Publishing itself stays
+  /// manual — this is a nudge, not an auto-post, since the official API is not
+  /// approved for w_member_social yet.
+  reminderSentAt DateTime?
   publishedAt DateTime?
   aiGenerated Boolean   @default(false)
   /// Set once published through the official API — the post's URN on the

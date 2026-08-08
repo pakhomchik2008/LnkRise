@@ -207,7 +207,19 @@ export function rewritePrompt(mode: string, passage: string, fullDraft: string):
     expand: "Develop it further — add reasoning or a specific example. Do not pad.",
     bolder: "Make the claim sharper and more arguable. Hedging out, position in.",
     warmer: "Make it warmer and more human. Less declarative, more direct address.",
+    paraphrase:
+      "Paraphrase the whole thing into a natural, professional voice suited to the platform. Fix anything that reads stiff, overly formal, or like a press release. Cut corporate jargon (\"leverage\", \"utilize\", \"synergy\", \"in today's fast-paced world\") for the plain word. Do not soften an argued position into a hedge, and do not invent detail that was not there.",
   };
+
+  // Whole-draft paraphrase passes the same text as both the passage and the
+  // context — sending it twice wastes tokens for no benefit, since there is
+  // nothing surrounding it to match voice against.
+  if (passage === fullDraft) {
+    return `${instruction[mode] ?? instruction.rewrite}
+
+THE DRAFT
+${passage}`;
+  }
 
   return `${instruction[mode] ?? instruction.rewrite}
 

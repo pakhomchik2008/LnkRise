@@ -243,7 +243,7 @@ export interface PostOutline {
   cta: string;
 }
 
-export type RewriteMode = "rewrite" | "shorten" | "expand" | "bolder" | "warmer";
+export type RewriteMode = "rewrite" | "shorten" | "expand" | "bolder" | "warmer" | "paraphrase";
 
 export type PostStatus = "draft" | "scheduled" | "published";
 

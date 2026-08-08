@@ -117,12 +117,43 @@ function fixArticles(text: string): string {
  * rewriter has no business doing, and the real model path is what produces
  * genuinely new prose.
  */
+/**
+ * Corporate jargon swapped for the plain word. Small, fixed list rather than
+ * an attempt at general paraphrasing — mechanical substitution cannot
+ * restructure a sentence, only a real model can do that; this just removes
+ * the words that read most obviously like a press release.
+ */
+const JARGON: [RegExp, string][] = [
+  [/\bleverage(d|s)?\b/gi, "use"],
+  [/\butiliz(e|ed|es|ing)\b/gi, "use"],
+  [/\bsynerg(y|ies)\b/gi, "collaboration"],
+  [/\bcirc(le|ling) back\b/gi, "follow up"],
+  [/\bdeep dive\b/gi, "close look"],
+  [/\blow[- ]hanging fruit\b/gi, "easy win"],
+  [/\bmove the needle\b/gi, "make a difference"],
+  [/\bin today'?s fast-paced (world|environment|landscape)\b/gi, "right now"],
+  [/\bat the end of the day\b/gi, "ultimately"],
+  [/\bthink outside the box\b/gi, "find a different approach"],
+];
+
+function deJargon(text: string): string {
+  return JARGON.reduce((current, [pattern, replacement]) => current.replace(pattern, replacement), text);
+}
+
 export function mockRewrite(passage: string, mode: RewriteMode): string[] {
   const sentences = passage.split(/(?<=[.!?])\s+/).filter(Boolean);
   const trimmed = passage.trim();
 
   const options = (() => {
     switch (mode) {
+      case "paraphrase":
+        return [
+          deJargon(trimmed).replace(/\bone (should|must)\b/gi, "you can"),
+          deJargon(sentences.length > 1 ? sentences.join(" ") : trimmed).replace(
+            /\b(I would like to|I wanted to)\b/gi,
+            "I want to",
+          ),
+        ];
       case "shorten":
         return [
           // Dropping half the sentences only shortens anything when there is
