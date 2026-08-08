@@ -1,12 +1,13 @@
 "use client";
 
-import { Bold, Check, Copy, Save, Sparkles, Wand2 } from "lucide-react";
+import { Bold, CalendarClock, Check, Copy, Save, Sparkles, Wand2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { rewriteSelection, saveDraft } from "@/app/(app)/content/actions";
 import { PostFeedback } from "@/components/content/post-feedback";
 import { PostPreview } from "@/components/content/post-preview";
 import { IdeaFlow } from "@/components/content/idea-flow";
+import { ScheduleDialog } from "@/components/content/schedule-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -48,6 +49,7 @@ export function ContentEditor({
   const [remaining, setRemaining] = React.useState(quotaRemaining);
   const [selection, setSelection] = React.useState<{ start: number; end: number } | null>(null);
   const [alternatives, setAlternatives] = React.useState<string[] | null>(null);
+  const [scheduleOpen, setScheduleOpen] = React.useState(false);
   const [pending, startTransition] = React.useTransition();
   const [copied, setCopied] = React.useState(false);
 
@@ -76,6 +78,31 @@ export function ContentEditor({
 
     startTransition(async () => {
       const result = await rewriteSelection({ passage: selectedText, mode, fullDraft: text });
+      if (!result.ok) {
+        if (result.quota) setRemaining(result.quota.remaining);
+        toast({ tone: "error", title: result.error });
+        return;
+      }
+      setRemaining(result.quota.remaining);
+      setAlternatives(result.alternatives);
+    });
+  }
+
+  /**
+   * Paraphrases the entire draft, not a selection — the ask is "make the
+   * whole thing sound right," not "fix this one sentence." Reuses the
+   * rewrite pipeline by selecting all of it, so the result lands in the same
+   * pick-a-replacement panel as every other rewrite; the whole draft is just
+   * what got selected.
+   */
+  function runParaphrase() {
+    const whole = text;
+    if (whole.trim().length === 0) return;
+
+    setSelection({ start: 0, end: whole.length });
+
+    startTransition(async () => {
+      const result = await rewriteSelection({ passage: whole, mode: "paraphrase", fullDraft: whole });
       if (!result.ok) {
         if (result.quota) setRemaining(result.quota.remaining);
         toast({ tone: "error", title: result.error });
@@ -140,6 +167,18 @@ export function ContentEditor({
         <Card>
           <div className="mb-2 flex flex-wrap items-center gap-2">
             <Button
+              variant="secondary"
+              size="sm"
+              disabled={text.trim().length === 0 || pending}
+              onClick={runParaphrase}
+              icon={<Wand2 className="size-3.5" />}
+            >
+              Paraphrase
+            </Button>
+
+            <span className="h-4 w-px bg-hairline" aria-hidden />
+
+            <Button
               variant="ghost"
               size="sm"
               disabled={!selection}
@@ -200,6 +239,15 @@ export function ContentEditor({
                 {copied ? "Copied" : "Copy"}
               </Button>
               <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setScheduleOpen(true)}
+                disabled={text.trim().length === 0 || overLimit}
+                icon={<CalendarClock className="size-3.5" />}
+              >
+                Schedule
+              </Button>
+              <Button
                 size="sm"
                 loading={pending}
                 onClick={save}
@@ -212,6 +260,13 @@ export function ContentEditor({
           </div>
         </Card>
 
+        <ScheduleDialog
+          open={scheduleOpen}
+          onClose={() => setScheduleOpen(false)}
+          postId={savedId}
+          content={text}
+        />
+
         {alternatives && (
           <Card>
             <p className="mb-1 flex items-center gap-1.5 text-sm font-semibold text-ink">
@@ -219,8 +274,14 @@ export function ContentEditor({
               Pick a replacement
             </p>
             <p className="mb-3 text-xs text-ink-muted">
-              Replacing: &ldquo;{selectedText.slice(0, 90)}
-              {selectedText.length > 90 ? "…" : ""}&rdquo;
+              {selection?.start === 0 && selection.end === text.length ? (
+                "Replacing the whole draft."
+              ) : (
+                <>
+                  Replacing: &ldquo;{selectedText.slice(0, 90)}
+                  {selectedText.length > 90 ? "…" : ""}&rdquo;
+                </>
+              )}
             </p>
 
             <div className="space-y-2">

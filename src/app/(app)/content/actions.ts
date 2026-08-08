@@ -9,9 +9,18 @@ import {
   rewritePassage,
 } from "@/lib/ai/content";
 import { requireUserId } from "@/lib/auth";
+import type { BestTime } from "@/lib/best-time";
+import { PLAN_ACCESS } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import { consumeGeneration, quotaFor, releaseGeneration, type QuotaState } from "@/lib/quota";
-import type { OnboardingAnswers, PostConcept, PostOutline, RewriteMode, Strategy } from "@/types";
+import type {
+  OnboardingAnswers,
+  PlanId,
+  PostConcept,
+  PostOutline,
+  RewriteMode,
+  Strategy,
+} from "@/types";
 
 /**
  * Every generating action reserves a quota slot first and hands it back if the
@@ -129,7 +138,7 @@ export async function draftFromOutline(input: unknown): Promise<ContentResult<{ 
 
 const rewriteInputSchema = z.object({
   passage: z.string().trim().min(1).max(3000),
-  mode: z.enum(["rewrite", "shorten", "expand", "bolder", "warmer"]),
+  mode: z.enum(["rewrite", "shorten", "expand", "bolder", "warmer", "paraphrase"]),
   fullDraft: z.string().max(3000),
 });
 
@@ -213,6 +222,83 @@ export async function saveDraft(
     console.error("[content] save failed", error);
     return { ok: false, error: "Could not save. Copy your text somewhere safe and try again." };
   }
+}
+
+const scheduleSchema = z.object({
+  id: z.string().cuid().optional(),
+  title: z.string().trim().max(300).optional(),
+  content: z.string().trim().min(1).max(3000),
+  scheduledAt: z.string().datetime({ offset: true }).or(z.string().min(1)),
+});
+
+export async function schedulePost(
+  input: unknown,
+): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  const userId = await requireUserId();
+
+  const parsed = scheduleSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: "That did not come through — check the text and the time." };
+  }
+
+  const scheduledAt = new Date(parsed.data.scheduledAt);
+  if (Number.isNaN(scheduledAt.getTime())) {
+    return { ok: false, error: "That is not a valid date and time." };
+  }
+  if (scheduledAt.getTime() <= Date.now()) {
+    return { ok: false, error: "Pick a time in the future." };
+  }
+
+  const { id, content } = parsed.data;
+  const title = parsed.data.title || content.split("\n").find(Boolean)?.slice(0, 120) || "Untitled";
+
+  try {
+    if (id) {
+      const updated = await prisma.post.updateMany({
+        where: { id, userId },
+        // Re-scheduling clears any earlier reminder, so a post pushed to a
+        // new time gets a reminder for the new time, not silence.
+        data: { title, content, status: "scheduled", scheduledAt, reminderSentAt: null },
+      });
+      if (updated.count === 0) return { ok: false, error: "That post no longer exists." };
+
+      revalidatePath("/content");
+      return { ok: true, id };
+    }
+
+    const created = await prisma.post.create({
+      data: { userId, title, content, status: "scheduled", scheduledAt, aiGenerated: false },
+      select: { id: true },
+    });
+
+    revalidatePath("/content");
+    return { ok: true, id: created.id };
+  } catch (error) {
+    console.error("[content] schedule failed", error);
+    return { ok: false, error: "Could not schedule. Try again." };
+  }
+}
+
+export async function suggestedPostTime(): Promise<
+  { ok: true; locked: false; time: BestTime } | { ok: true; locked: true } | { ok: false; error: string }
+> {
+  const userId = await requireUserId();
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { subscription: { select: { plan: true } } },
+  });
+
+  const plan = (user?.subscription?.plan ?? "trial") as PlanId;
+
+  // Redacted on the server, same as the Connections lanes: a locked feature's
+  // computed value must never reach the browser, or the gate is one network
+  // tab inspection away from pointless.
+  if (!PLAN_ACCESS[plan].analytics) return { ok: true, locked: true };
+
+  const { bestTimeToPost } = await import("@/lib/best-time");
+  const time = await bestTimeToPost(userId);
+  return { ok: true, locked: false, time };
 }
 
 export async function deleteDraft(
