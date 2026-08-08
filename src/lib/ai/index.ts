@@ -4,6 +4,7 @@ import type {
   OnboardingAnswers,
   ProfileAnalysis,
   Strategy,
+  UserFact,
 } from "@/types";
 import { mockDailyBrief, mockProfileAnalysis, mockStrategy } from "./mock/engine";
 import {
@@ -35,6 +36,7 @@ export async function analyzeProfile(
   seed: string,
   answers: OnboardingAnswers,
   profile?: LinkedInProfile | null,
+  facts: UserFact[] = [],
 ): Promise<AiResult<ProfileAnalysis>> {
   const generatedAt = new Date().toISOString();
 
@@ -42,7 +44,7 @@ export async function analyzeProfile(
     async () => {
       const parsed = await generateJson({
         system: profileAnalysisSystem,
-        prompt: profileAnalysisPrompt(answers, profile),
+        prompt: profileAnalysisPrompt(answers, profile, facts),
         jsonSchema: profileAnalysisJsonSchema,
         validator: profileAnalysisSchema,
         effort: "medium",
@@ -57,6 +59,7 @@ export async function generateStrategy(
   seed: string,
   answers: OnboardingAnswers,
   analysis: ProfileAnalysis,
+  facts: UserFact[] = [],
 ): Promise<AiResult<Strategy>> {
   const generatedAt = new Date().toISOString();
 
@@ -64,7 +67,7 @@ export async function generateStrategy(
     async () => {
       const parsed = await generateJson({
         system: strategySystem,
-        prompt: strategyPrompt(answers, analysis),
+        prompt: strategyPrompt(answers, analysis, facts),
         jsonSchema: strategyJsonSchema,
         validator: strategySchema,
         effort: "medium",
@@ -81,12 +84,13 @@ export async function generateDailyBrief(
   strategy: Strategy,
   dayNumber: number,
   recentTopics: string[] = [],
+  facts: UserFact[] = [],
 ): Promise<AiResult<DailyBriefContent>> {
   return withFallback(
     () =>
       generateJson({
         system: dailyBriefSystem,
-        prompt: dailyBriefPrompt(answers, strategy, dayNumber, recentTopics),
+        prompt: dailyBriefPrompt(answers, strategy, dayNumber, recentTopics, facts),
         jsonSchema: dailyBriefJsonSchema,
         validator: dailyBriefSchema,
         maxTokens: 6000,

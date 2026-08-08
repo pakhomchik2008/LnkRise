@@ -2,6 +2,7 @@ import "server-only";
 import { generateDailyBrief } from "@/lib/ai";
 import { attachRealPeople, tasksFromBrief } from "@/lib/briefs";
 import { PLAN_ACCESS } from "@/lib/constants";
+import { factsForPrompt, markFactsUsed } from "@/lib/fact-store";
 import { labelInspirations } from "@/lib/linkedin/inspirations";
 import { prisma, toJson } from "@/lib/prisma";
 import type { DailyBriefContent, OnboardingAnswers, PlanId, Strategy } from "@/types";
@@ -62,13 +63,18 @@ export async function ensureBriefForUser(userId: string, date: Date): Promise<En
     .map((row) => (row.content as unknown as DailyBriefContent)?.postIdea?.topic)
     .filter((topic): topic is string => Boolean(topic));
 
+  const facts = await factsForPrompt(userId);
+
   const generated = await generateDailyBrief(
     userId,
     answers,
     strategy,
     dayNumberFor(user.onboardedAt, date),
     recentTopics,
+    facts,
   );
+
+  await markFactsUsed(facts.map((fact) => fact.id));
 
   let content = generated.value;
 

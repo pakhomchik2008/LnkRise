@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { generateConnectionPlan } from "@/lib/ai/connection-strategy";
 import { requireUserId } from "@/lib/auth";
+import { factsForPrompt } from "@/lib/fact-store";
 import { prisma, toJson } from "@/lib/prisma";
 import type { ConnectionPlan, OnboardingAnswers, Strategy } from "@/types";
 
@@ -39,6 +40,7 @@ export async function refreshConnectionPlan(): Promise<ConnectionPlanResult> {
     const generated = await generateConnectionPlan(
       user.onboardingData as unknown as OnboardingAnswers,
       user.strategy as unknown as Strategy,
+      await factsForPrompt(userId),
     );
 
     await prisma.user.update({

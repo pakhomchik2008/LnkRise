@@ -11,6 +11,7 @@ import {
 import { requireUserId } from "@/lib/auth";
 import type { BestTime } from "@/lib/best-time";
 import { PLAN_ACCESS } from "@/lib/constants";
+import { factsForPrompt, markFactsUsed } from "@/lib/fact-store";
 import { prisma } from "@/lib/prisma";
 import { consumeGeneration, quotaFor, releaseGeneration, type QuotaState } from "@/lib/quota";
 import type {
@@ -65,13 +66,17 @@ export async function suggestConcepts(): Promise<ContentResult<{ concepts: PostC
       select: { title: true },
     });
 
+    const facts = await factsForPrompt(userId);
     const result = await generateConcepts(
       userId,
       plan.answers,
       plan.strategy,
       recent.map((post) => post.title).filter((title): title is string => Boolean(title)),
+      4,
+      facts,
     );
 
+    await markFactsUsed(facts.map((fact) => fact.id));
     return { ok: true, concepts: result.value, source: result.source, quota: reserved.state };
   } catch (error) {
     await releaseGeneration(userId);
@@ -98,7 +103,7 @@ export async function outlineConcept(input: unknown): Promise<ContentResult<{ ou
   if (!reserved.ok) return { ok: false, error: OUT_OF_QUOTA, quota: reserved.state };
 
   try {
-    const result = await generateOutline(userId, plan.answers, parsed.data);
+    const result = await generateOutline(userId, plan.answers, parsed.data, await factsForPrompt(userId));
     return { ok: true, outline: result.value, source: result.source, quota: reserved.state };
   } catch (error) {
     await releaseGeneration(userId);
@@ -127,7 +132,10 @@ export async function draftFromOutline(input: unknown): Promise<ContentResult<{ 
   if (!reserved.ok) return { ok: false, error: OUT_OF_QUOTA, quota: reserved.state };
 
   try {
-    const result = await generateDraft(plan.answers, parsed.data);
+    const facts = await factsForPrompt(userId);
+    const result = await generateDraft(plan.answers, parsed.data, facts);
+
+    await markFactsUsed(facts.map((fact) => fact.id));
     return { ok: true, draft: result.value, source: result.source, quota: reserved.state };
   } catch (error) {
     await releaseGeneration(userId);

@@ -214,6 +214,7 @@ export const APP_NAV: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: "LayoutDashboard" },
   { href: "/daily-brief", label: "Daily Brief", icon: "Sunrise" },
   { href: "/content", label: "Content", icon: "PenLine" },
+  { href: "/facts", label: "Your material", icon: "Library" },
   { href: "/analytics", label: "Analytics", icon: "TrendingUp", premium: true },
   { href: "/connections", label: "Connections", icon: "Users", premium: true },
   { href: "/settings", label: "Settings", icon: "Settings" },

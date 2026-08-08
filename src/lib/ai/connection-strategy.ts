@@ -4,6 +4,7 @@ import type {
   OnboardingAnswers,
   ConnectionPlan,
   Strategy,
+  UserFact,
 } from "@/types";
 import { seededRandom } from "@/lib/utils";
 import { CONNECTION_CATEGORY_ORDER, mockConnectionPlan } from "./mock/connections";
@@ -23,6 +24,7 @@ import type { AiResult } from "./index";
 export async function generateConnectionPlan(
   answers: OnboardingAnswers,
   strategy: Strategy,
+  facts: UserFact[] = [],
 ): Promise<AiResult<ConnectionPlan>> {
   const generatedAt = new Date().toISOString();
 
@@ -30,7 +32,7 @@ export async function generateConnectionPlan(
     async () => {
       const parsed = await generateJson({
         system: connectionPlanSystem,
-        prompt: connectionPlanPrompt(answers, strategy),
+        prompt: connectionPlanPrompt(answers, strategy, facts),
         jsonSchema: connectionPlanJsonSchema,
         validator: connectionPlanSchema,
         effort: "medium",

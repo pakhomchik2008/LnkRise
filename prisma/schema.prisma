@@ -61,6 +61,7 @@ model User {
   sessions     Session[]
   apiKeys      ApiKey[]
   aiUsage      AiUsage[]
+  facts        Fact[]
 }
 
 model Account {
@@ -133,6 +134,35 @@ model DailyBrief {
 
   @@unique([userId, date])
   @@index([userId, date(sort: Desc)])
+}
+
+/// One concrete thing that is true about this user: a project that failed, a
+/// number that surprised them, an argument they lost.
+///
+/// This exists because the generator had nothing specific to work from. Its
+/// entire input was a goal enum, an industry string and one free-text
+/// sentence, so both the mock and the real model produced text that anyone in
+/// that industry could have posted. Facts are the missing input.
+///
+/// `body` is the user's own words and is never rewritten by a model — the
+/// point is that it carries detail no model could invent.
+model Fact {
+  id       String @id @default(cuid())
+  userId   String
+  /// The question that drew this out, kept so the fact retains its context.
+  question String @db.Text
+  body     String @db.Text
+  kind     String // failure, number, incident, opinion_change, lesson, credential
+  /// Set when the fact is used in a generation, so prompts can rotate through
+  /// the bank rather than leaning on whichever one happens to be first.
+  lastUsedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
 }
 
 /// Per-day AI generation counter, enforcing PLAN_ACCESS.aiGenerationsPerDay.
