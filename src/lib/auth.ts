@@ -94,6 +94,8 @@ function buildProviders(): NextAuthConfig["providers"] {
             email: user.email,
             name: user.name,
             image: user.image,
+            role: user.role,
+            onboardedAt: user.onboardedAt,
           };
         },
       }),
@@ -121,4 +123,13 @@ export async function requireUserId(): Promise<string> {
   const id = await currentUserId();
   if (!id) throw new Error("Not authenticated");
   return id;
+}
+
+/** Throws unless the caller is signed in with the coach role. */
+export async function requireCoachId(): Promise<string> {
+  const session = await auth();
+  if (!session?.user?.id || session.user.role !== "coach") {
+    throw new Error("Not authorized");
+  }
+  return session.user.id;
 }

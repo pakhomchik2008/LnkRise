@@ -11,12 +11,14 @@ import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Dropdown, DropdownItem, DropdownSeparator } from "@/components/ui/dropdown";
 import { Tooltip } from "@/components/ui/tooltip";
-import { APP_NAV } from "@/lib/constants";
+import { APP_NAV, type NavItem } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
 export interface SidebarProps {
   user: { name: string | null; email: string; image: string | null };
   plan: string;
+  nav?: NavItem[];
+  branding?: { name: string; logoUrl: string | null } | null;
 }
 
 function NavIcon({ name, className }: { name: string; className?: string }) {
@@ -24,7 +26,7 @@ function NavIcon({ name, className }: { name: string; className?: string }) {
   return <Icon aria-hidden className={className} />;
 }
 
-export function Sidebar({ user, plan }: SidebarProps) {
+export function Sidebar({ user, plan, nav = APP_NAV, branding }: SidebarProps) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = React.useState(false);
 
@@ -38,12 +40,26 @@ export function Sidebar({ user, plan }: SidebarProps) {
     >
       <div className={cn("flex h-16 items-center px-4", collapsed && "justify-center px-0")}>
         <Link href="/dashboard" aria-label="Dashboard">
-          {collapsed ? <LogoMark size={26} /> : <Logo />}
+          {branding ? (
+            <span className="inline-flex items-center gap-2">
+              {branding.logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={branding.logoUrl} alt={branding.name} className="size-7 rounded-[var(--radius-sm)] object-contain" />
+              ) : (
+                <LogoMark size={collapsed ? 26 : 22} />
+              )}
+              {!collapsed && <span className="truncate text-[17px] font-bold tracking-tight text-ink">{branding.name}</span>}
+            </span>
+          ) : collapsed ? (
+            <LogoMark size={26} />
+          ) : (
+            <Logo />
+          )}
         </Link>
       </div>
 
       <nav className="flex-1 space-y-1 px-3">
-        {APP_NAV.map((item) => {
+        {nav.map((item) => {
           const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
           const link = (
             <Link
