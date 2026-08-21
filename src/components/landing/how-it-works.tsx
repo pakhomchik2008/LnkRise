@@ -1,8 +1,6 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useAnimatedCounter } from "@/hooks/use-animated-counter";
-import { useInView } from "@/hooks/use-in-view";
 
 const STEPS = [
   {
@@ -22,33 +20,10 @@ const STEPS = [
   },
 ];
 
-function Counter({ value, suffix }: { value: number; suffix: string }) {
-  const { ref, inView } = useInView<HTMLSpanElement>({ amount: 0.6 });
-  const animated = useAnimatedCounter(value, { start: inView });
-
-  return (
-    <span ref={ref} className="font-mono font-semibold tabular-nums text-ink">
-      {animated.toLocaleString()}
-      {suffix}
-    </span>
-  );
-}
-
 export function HowItWorks() {
   return (
     <section id="how-it-works" className="border-t border-hairline px-5 py-20">
       <div className="mx-auto max-w-6xl">
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.5 }}
-          transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
-          className="text-center text-sm text-ink-muted"
-        >
-          Currently coaching <Counter value={2847} suffix="" /> professionals across{" "}
-          <Counter value={38} suffix="" /> fields
-        </motion.p>
-
         <motion.h2
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
