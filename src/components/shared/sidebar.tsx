@@ -134,14 +134,6 @@ export function Sidebar({ user, plan, nav = APP_NAV, branding }: SidebarProps) {
             <icons.Settings aria-hidden className="size-4 text-ink-muted" />
             Settings
           </Link>
-          <Link
-            href="/billing"
-            role="menuitem"
-            className="flex w-full items-center gap-2.5 rounded-[var(--radius-sm)] px-2.5 py-2 text-sm text-ink transition-colors hover:bg-ink/[0.05]"
-          >
-            <icons.CreditCard aria-hidden className="size-4 text-ink-muted" />
-            Billing
-          </Link>
           <DropdownSeparator />
           <DropdownItem
             icon={<icons.LogOut className="size-4" />}
