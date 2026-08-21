@@ -4,7 +4,7 @@ import { AnalyticsView } from "@/components/analytics/analytics-view";
 import { Card } from "@/components/ui/card";
 import { GrowthScore } from "@/components/ui/growth-score";
 import { requireUserId } from "@/lib/auth";
-import { PLAN_ACCESS, growthTier } from "@/lib/constants";
+import { GROWTH_TIERS, PLAN_ACCESS, growthTier } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import type { PlanId, StatPoint } from "@/types";
 
@@ -61,6 +61,7 @@ export default async function AnalyticsPage() {
   const plan = (user.subscription?.plan ?? "trial") as PlanId;
   const unlocked = PLAN_ACCESS[plan].analytics;
   const tier = growthTier(user.growthScore);
+  const nextTier = GROWTH_TIERS.find((candidate) => candidate.min > tier.min);
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -71,14 +72,32 @@ export default async function AnalyticsPage() {
         </p>
       </header>
 
-      <Card className="flex flex-col items-center gap-2 p-6 sm:flex-row sm:justify-between">
-        <div className="flex items-center gap-4">
-          <GrowthScore score={user.growthScore} size={88} showTier={false} />
-          <div>
-            <p className="text-lg font-semibold text-ink">{tier.label}</p>
-            <p className="text-sm text-ink-muted">Growth score {user.growthScore} / 100</p>
-          </div>
+      <Card variant="gradient-border" className="flex flex-col items-center gap-6 p-7 sm:flex-row">
+        <GrowthScore score={user.growthScore} size={112} showTier={false} />
+
+        <div className="flex-1 text-center sm:text-left">
+          <span
+            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide text-white"
+            style={{ backgroundImage: tier.gradient }}
+          >
+            {tier.label}
+          </span>
+          <p className="mt-2 text-2xl font-bold tabular-nums text-ink">
+            {user.growthScore}
+            <span className="text-base font-medium text-ink-muted"> / 100</span>
+          </p>
+          <p className="mt-1 text-sm text-ink-muted">
+            Profile quality, task completion and streak, weighted together.
+          </p>
         </div>
+
+        {nextTier && (
+          <div className="w-full shrink-0 border-t border-hairline pt-4 text-center sm:w-auto sm:border-l sm:border-t-0 sm:pl-6 sm:pt-0 sm:text-left">
+            <p className="text-xs font-medium text-ink-muted">Next tier</p>
+            <p className="mt-1 text-sm font-semibold text-ink">{nextTier.label}</p>
+            <p className="text-xs text-ink-muted">{nextTier.min - user.growthScore} points away</p>
+          </div>
+        )}
       </Card>
 
       <AnalyticsView points={points} postDates={postDates} unlocked={unlocked} />
