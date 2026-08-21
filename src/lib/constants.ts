@@ -219,3 +219,9 @@ export const APP_NAV: NavItem[] = [
   { href: "/connections", label: "Connections", icon: "Users", premium: true },
   { href: "/settings", label: "Settings", icon: "Settings" },
 ];
+
+/** Shown only to role === "coach", above the regular nav. */
+export const COACH_NAV: NavItem[] = [
+  { href: "/coach", label: "Clients", icon: "Users2" },
+  { href: "/coach/settings", label: "White-label", icon: "Palette" },
+];

@@ -19,7 +19,7 @@ export const authConfig = {
       const signedIn = Boolean(auth?.user);
       const { pathname } = request.nextUrl;
 
-      const isAppRoute = ["/dashboard", "/daily-brief", "/content", "/analytics", "/connections", "/settings", "/onboarding", "/billing"].some(
+      const isAppRoute = ["/dashboard", "/daily-brief", "/content", "/analytics", "/connections", "/settings", "/onboarding", "/billing", "/coach"].some(
         (route) => pathname === route || pathname.startsWith(`${route}/`),
       );
 
@@ -30,12 +30,14 @@ export const authConfig = {
       if (user) {
         token.id = user.id;
         token.onboarded = "onboardedAt" in user ? Boolean(user.onboardedAt) : false;
+        token.role = "role" in user ? (user.role as string) : "user";
       }
       return token;
     },
     session({ session, token }) {
       if (token.id && session.user) {
         session.user.id = token.id as string;
+        session.user.role = (token.role as string) ?? "user";
       }
       return session;
     },

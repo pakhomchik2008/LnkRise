@@ -25,7 +25,15 @@ model User {
   emailVerified  DateTime?
   name           String?
   image          String?
-  role           String    @default("user") // user, admin
+  role           String    @default("user") // user, admin, coach
+
+  /// Set on a client's account once a coach adds them. Null for everyone else.
+  coachId        String?
+  /// White-label branding, set by the coach on their own row and read by
+  /// their clients' sidebars. Meaningless on a non-coach row.
+  brandName      String?
+  brandLogoUrl   String?
+  brandColor     String?
 
   linkedinUrl    String?
   linkedinData   Json? // profile data: fetched via OAuth, or entered by hand
@@ -62,6 +70,11 @@ model User {
   apiKeys      ApiKey[]
   aiUsage      AiUsage[]
   facts        Fact[]
+
+  coach   User?  @relation("CoachClients", fields: [coachId], references: [id], onDelete: SetNull)
+  clients User[] @relation("CoachClients")
+
+  @@index([coachId])
 }
 
 model Account {
