@@ -8,10 +8,17 @@ import { prisma } from "@/lib/prisma";
 const emailSchema = z.string().trim().toLowerCase().email();
 
 /**
- * Adds a client by email. If no account exists yet, this creates a shell row
- * so the coach can onboard them ahead of time — when the client eventually
- * signs in with that same email, the auth upsert lands on this row rather
- * than creating a second one, so the coachId link survives.
+ * Adds a client by email. Only two paths are allowed:
+ *   1. No user row exists — create a shell row with { email, coachId }. When
+ *      the client eventually signs in under that email, the auth adapter
+ *      upserts onto this row and the coach link survives.
+ *   2. A row exists but is itself a shell (never signed in, never onboarded)
+ *      and unattached — attach it.
+ *
+ * A real, signed-in account that the coach did not create cannot be silently
+ * adopted. If the coach knows a real user and wants them on the platform, the
+ * user has to grant that through an out-of-band invitation the coach sends
+ * (email/DM) — not by the coach typing their address into this form.
  */
 export async function addClient(formData: FormData) {
   const coachId = await requireCoachId();
@@ -23,20 +30,34 @@ export async function addClient(formData: FormData) {
     return { error: "You can't add yourself as a client." };
   }
 
-  const existing = await prisma.user.findUnique({ where: { email }, select: { id: true, coachId: true, role: true } });
-
-  if (existing?.role === "coach") {
-    return { error: "That account is itself a coach account." };
-  }
-  if (existing?.coachId && existing.coachId !== coachId) {
-    return { error: "That person already has a coach." };
-  }
-
-  await prisma.user.upsert({
+  const existing = await prisma.user.findUnique({
     where: { email },
-    update: { coachId },
-    create: { email, coachId },
+    select: { id: true, coachId: true, role: true, onboardedAt: true, lastActiveAt: true, emailVerified: true },
   });
+
+  if (existing) {
+    if (existing.role === "coach" || existing.role === "admin") {
+      return { error: "That account is a coach or admin account and can't be a client." };
+    }
+    if (existing.coachId === coachId) {
+      return { error: "That client is already on your list." };
+    }
+    if (existing.coachId) {
+      return { error: "That person already has a coach." };
+    }
+    // A real, signed-in account (has ever signed in or verified email) is
+    // never silently adopted — the account owner has to say yes first.
+    const hasBeenUsed = Boolean(existing.onboardedAt || existing.lastActiveAt || existing.emailVerified);
+    if (hasBeenUsed) {
+      return {
+        error: "That account already exists and isn't linked to any coach. Ask them to invite you in from their own account, or use a different email.",
+      };
+    }
+    // Shell row (created by another flow, never used). Attach it.
+    await prisma.user.update({ where: { id: existing.id }, data: { coachId } });
+  } else {
+    await prisma.user.create({ data: { email, coachId } });
+  }
 
   revalidatePath("/coach");
   return { error: null };
