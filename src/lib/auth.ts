@@ -133,3 +133,12 @@ export async function requireCoachId(): Promise<string> {
   }
   return session.user.id;
 }
+
+/** Throws unless the caller is signed in with the admin role. */
+export async function requireAdminId(): Promise<string> {
+  const session = await auth();
+  if (!session?.user?.id || session.user.role !== "admin") {
+    throw new Error("Not authorized");
+  }
+  return session.user.id;
+}
