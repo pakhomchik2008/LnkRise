@@ -19,7 +19,7 @@ export const authConfig = {
       const signedIn = Boolean(auth?.user);
       const { pathname } = request.nextUrl;
 
-      const isAppRoute = ["/dashboard", "/daily-brief", "/content", "/analytics", "/connections", "/settings", "/onboarding", "/billing", "/coach"].some(
+      const isAppRoute = ["/dashboard", "/daily-brief", "/content", "/analytics", "/connections", "/settings", "/onboarding", "/billing", "/coach", "/admin"].some(
         (route) => pathname === route || pathname.startsWith(`${route}/`),
       );
 
