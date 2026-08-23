@@ -16,6 +16,7 @@ export const metadata: Metadata = {
 // Widest range the page offers. Capped rather than unbounded so a
 // long-lived account can't turn this into an unbounded table scan.
 const MAX_DAYS = 90;
+const TRIAL_DAYS = 7;
 
 export default async function AnalyticsPage() {
   const userId = await requireUserId();
@@ -32,7 +33,14 @@ export default async function AnalyticsPage() {
   if (!user) redirect("/login");
   if (!user.onboardedAt) redirect("/onboarding");
 
-  const since = new Date(Date.now() - MAX_DAYS * 24 * 60 * 60 * 1000);
+  const plan = (user.subscription?.plan ?? "trial") as PlanId;
+  const unlocked = PLAN_ACCESS[plan].analytics;
+
+  // The window is enforced on the server so a locked user cannot read the
+  // extra days out of the RSC payload — the client toggle only decides what
+  // the user sees within what the server chose to hand out.
+  const windowDays = unlocked ? MAX_DAYS : TRIAL_DAYS;
+  const since = new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000);
 
   const [snapshots, publishedPosts] = await Promise.all([
     prisma.analyticsSnapshot.findMany({
@@ -58,8 +66,6 @@ export default async function AnalyticsPage() {
     .map((post) => post.publishedAt?.toISOString().slice(0, 10))
     .filter((date): date is string => Boolean(date));
 
-  const plan = (user.subscription?.plan ?? "trial") as PlanId;
-  const unlocked = PLAN_ACCESS[plan].analytics;
   const tier = growthTier(user.growthScore);
   const nextTier = GROWTH_TIERS.find((candidate) => candidate.min > tier.min);
 

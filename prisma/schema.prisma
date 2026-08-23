@@ -75,6 +75,11 @@ model User {
   clients User[] @relation("CoachClients")
 
   @@index([coachId])
+  // Admin overview and cron predicates filter by these; without indexes
+  // every load is a sequential scan of the User table.
+  @@index([role])
+  @@index([createdAt])
+  @@index([timezone, emailBriefHour])
 }
 
 model Account {
@@ -219,6 +224,10 @@ model Post {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, status])
+  // scheduled-posts cron scans by (status, scheduledAt) across users.
+  @@index([status, scheduledAt])
+  // Analytics and dashboard order the user's posts by publish time.
+  @@index([userId, publishedAt(sort: Desc)])
 }
 
 model AnalyticsSnapshot {
