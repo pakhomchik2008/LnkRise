@@ -48,7 +48,7 @@ Open <http://localhost:3000>. In development a sign-in form accepts any email ad
 | Coaching content | Deterministic mock engine in `src/lib/ai/mock/` — real, field-specific advice, seeded per user so it is stable | Claude (`claude-opus-5`) with JSON-schema-constrained output, validated with Zod |
 | Sign-in | Email-only development provider | Google and/or LinkedIn OAuth |
 | Email | Preferences stored, nothing sent | Resend |
-| Billing | Plan shape stored, pages marked as pending | Stripe |
+| Billing | `/billing` shows plans, checkout disabled | Stripe Checkout + billing portal, live |
 
 `src/lib/ai/provider.ts` is the single seam. Every AI call goes through `withFallback`, so a missing key, a malformed response or a refusal all degrade to the mock path rather than failing the request.
 
@@ -123,9 +123,7 @@ Each of these was a deliberate call, not an oversight:
 
 ## Still to come
 
-- **Stripe billing.** `/billing` is a placeholder. The `Subscription` model, `stripeCustomerId` and `PLAN_ACCESS` gates are already in place; the payment surface is not.
-- **Case studies.** The `CaseStudy` model exists and is seeded unpublished, but no public page renders it yet.
-- **Live LinkedIn Community API validation.** The client code (`src/lib/linkedin/`) is written and wired behind `LINKEDIN_COMMUNITY_API=enabled`, but has not been end-to-end tested against a live approved account.
-- **Waitlist admin view.** Entries collected from the landing page live in `WaitlistEntry`; the admin panel does not yet expose them.
+- **Live LinkedIn Community API validation.** The client code (`src/lib/linkedin/`) is written and wired behind `LINKEDIN_COMMUNITY_API=enabled`, with a manual "Sync from LinkedIn" trigger on `/analytics` — but it has not been end-to-end tested against a live, LinkedIn-approved account.
+- **Coaching content in languages other than English.** The settings language selector only offers English today.
 
 See `docs/BUYER-README.md` for the technical due-diligence version of this list.

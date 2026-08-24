@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { ConnectionLanes } from "@/components/connections/connection-lanes";
 import { requireUserId } from "@/lib/auth";
-import { PLAN_ACCESS } from "@/lib/constants";
+import { PLAN_ACCESS, effectivePlan } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
-import type { ConnectionPlan, PlanId } from "@/types";
+import type { ConnectionPlan } from "@/types";
 
 export const metadata: Metadata = {
   title: "Connections",
@@ -19,7 +19,7 @@ export default async function ConnectionsPage() {
     select: {
       onboardedAt: true,
       connectionPlan: true,
-      subscription: { select: { plan: true } },
+      subscription: { select: { plan: true, status: true, currentPeriodEnd: true } },
     },
   });
 
@@ -32,7 +32,7 @@ export default async function ConnectionsPage() {
   // worth paying for — and the other three are described but not spelled out.
   // Every account is on trial until billing lands in Phase 6, so this is what
   // is on screen today; it starts unlocking the moment a plan can be bought.
-  const subscriptionPlan = (user.subscription?.plan ?? "trial") as PlanId;
+  const subscriptionPlan = effectivePlan(user.subscription);
   const unlocked = PLAN_ACCESS[subscriptionPlan].connectionStrategy;
 
   // Redact here rather than hiding in the client: a locked lane's query and

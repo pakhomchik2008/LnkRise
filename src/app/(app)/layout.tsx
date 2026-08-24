@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/shared/sidebar";
 import { Topbar } from "@/components/shared/topbar";
 import { auth } from "@/lib/auth";
-import { APP_NAV, COACH_NAV } from "@/lib/constants";
+import { APP_NAV, COACH_NAV, effectivePlan } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -17,7 +17,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       image: true,
       streak: true,
       role: true,
-      subscription: { select: { plan: true } },
+      subscription: { select: { plan: true, status: true, currentPeriodEnd: true } },
       coach: { select: { brandName: true, brandLogoUrl: true } },
     },
   });
@@ -34,7 +34,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="flex min-h-dvh">
       <Sidebar
         user={{ name: user.name, email: user.email, image: user.image }}
-        plan={user.subscription?.plan ?? "trial"}
+        plan={effectivePlan(user.subscription)}
         nav={isCoach ? [...COACH_NAV, ...APP_NAV] : APP_NAV}
         branding={branding}
       />

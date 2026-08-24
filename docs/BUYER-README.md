@@ -29,9 +29,15 @@ as a running business — see "What's not included" below.
 
 ## What's not included
 
-- **Billing.** No Stripe integration — `/billing` is a placeholder page. If
-  you're reselling to your own clients, you invoice them yourself; nothing in
-  this codebase assumes a payment processor.
+- ~~Billing~~ **Built.** `/billing` runs real Stripe Checkout — Starter as a
+  one-time payment, Pro as a recurring subscription — plus the billing portal
+  for self-serve cancel/upgrade/invoices. A webhook (`/api/webhooks/stripe`)
+  is the only writer of subscription state; `effectivePlan()` in
+  `src/lib/constants.ts` is what every feature gate actually reads, so a
+  lapsed Starter pass or a canceled Pro subscription falls back to trial
+  access on its own. You still need your own Stripe account — `STRIPE_SECRET_KEY`,
+  `STRIPE_PRICE_STARTER`, `STRIPE_PRICE_PRO`, `STRIPE_WEBHOOK_SECRET` — a
+  buyer's Stripe account and price IDs can't be inherited from ours.
 - **Analytics dashboard.** Built. `/analytics` renders the growth score,
   7/30/90-day trend chart with per-metric switching, and a derived insights
   panel. Range is server-sliced by plan (trial gets 7 days; Starter and Pro

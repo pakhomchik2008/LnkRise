@@ -120,6 +120,26 @@ export const PLAN_ACCESS: Record<PlanId, PlanFeatureAccess> = {
   },
 };
 
+export interface SubscriptionLike {
+  plan: string;
+  status: string;
+  currentPeriodEnd: Date | null;
+}
+
+/**
+ * The plan a subscription row actually grants right now, not just the label
+ * stored on it. Starter is a one-time pass with a fixed end date rather than
+ * a recurring charge, so it has to expire on its own — Stripe never sends a
+ * cancellation webhook for it. Pro checks the same field as a safety net in
+ * case a `customer.subscription.updated` webhook is ever missed.
+ */
+export function effectivePlan(subscription: SubscriptionLike | null): PlanId {
+  if (!subscription || subscription.plan === "trial") return "trial";
+  if (subscription.status === "canceled" || subscription.status === "expired") return "trial";
+  if (subscription.currentPeriodEnd && subscription.currentPeriodEnd.getTime() < Date.now()) return "trial";
+  return subscription.plan as PlanId;
+}
+
 // ---------------------------------------------------------------------------
 // Growth score tiers
 // ---------------------------------------------------------------------------
