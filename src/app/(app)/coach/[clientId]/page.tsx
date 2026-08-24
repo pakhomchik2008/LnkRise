@@ -1,9 +1,11 @@
 import { notFound, redirect } from "next/navigation";
+import { BriefOverridePanel, CoachNotesPanel } from "@/components/coach/client-detail-panels";
 import { Avatar } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { requireCoachId } from "@/lib/auth";
 import { fromJson } from "@/lib/prisma";
 import { prisma } from "@/lib/prisma";
+import { toUtcDay } from "@/lib/utils";
 import type { DailyBriefContent } from "@/types";
 
 function Metric({ label, value }: { label: string; value: string | number }) {
@@ -45,7 +47,7 @@ export default async function ClientDetailPage({
 
   if (!client) notFound();
 
-  const [latestBrief, postCount, factCount] = await Promise.all([
+  const [latestBrief, postCount, factCount, notes, todaysBrief] = await Promise.all([
     prisma.dailyBrief.findFirst({
       where: { userId: clientId },
       orderBy: { date: "desc" },
@@ -53,9 +55,19 @@ export default async function ClientDetailPage({
     }),
     prisma.post.count({ where: { userId: clientId } }),
     prisma.fact.count({ where: { userId: clientId } }),
+    prisma.coachNote.findMany({
+      where: { coachId, clientId },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, body: true, createdAt: true },
+    }),
+    prisma.dailyBrief.findUnique({
+      where: { userId_date: { userId: clientId, date: toUtcDay() } },
+      select: { content: true },
+    }),
   ]);
 
   const briefContent = latestBrief ? fromJson<DailyBriefContent>(latestBrief.content) : null;
+  const todaysContent = todaysBrief ? fromJson<DailyBriefContent>(todaysBrief.content) : null;
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -101,6 +113,30 @@ export default async function ClientDetailPage({
             {factCount} fact{factCount === 1 ? "" : "s"} on file · last active{" "}
             {client.lastActiveAt ? client.lastActiveAt.toLocaleDateString() : "never"}
           </p>
+
+          <BriefOverridePanel
+            clientId={client.id}
+            defaults={
+              todaysContent
+                ? {
+                    todayFocus: todaysContent.todayFocus,
+                    postTopic: todaysContent.postIdea.topic,
+                    postHook: todaysContent.postIdea.hook,
+                    optimizationTitle: todaysContent.optimizationTip.title,
+                    optimizationDetail: todaysContent.optimizationTip.detail,
+                  }
+                : null
+            }
+          />
+
+          <CoachNotesPanel
+            clientId={client.id}
+            notes={notes.map((note) => ({
+              id: note.id,
+              body: note.body,
+              createdAt: note.createdAt.toLocaleString(),
+            }))}
+          />
         </>
       )}
     </div>

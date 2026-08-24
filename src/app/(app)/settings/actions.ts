@@ -72,6 +72,23 @@ export async function updatePreferences(formData: FormData): Promise<Result> {
   return { ok: true };
 }
 
+const inspirationsSchema = z.array(z.string().trim().url()).max(3);
+
+/** The people-you-admire URLs, collected at onboarding but editable after. */
+export async function updateInspirations(urls: string[]): Promise<Result> {
+  const userId = await requireUserId();
+
+  const parsed = inspirationsSchema.safeParse(urls.filter(Boolean));
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Check those URLs" };
+  }
+
+  await prisma.user.update({ where: { id: userId }, data: { inspirations: parsed.data } });
+
+  revalidatePath("/settings");
+  return { ok: true };
+}
+
 /**
  * Hard delete. Every related row cascades from the User row, so this removes
  * briefs, tasks, posts, analytics, sessions and OAuth links along with it.

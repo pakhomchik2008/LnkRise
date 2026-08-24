@@ -307,6 +307,17 @@ model WaitlistEntry {
   createdAt DateTime @default(now())
 }
 
+/// A coach's private note on one of their clients. Never shown to the client.
+model CoachNote {
+  id        String   @id @default(cuid())
+  coachId   String
+  clientId  String
+  body      String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([coachId, clientId])
+}
+
 /// Pairs the browser extension to an account. The raw key is shown once at
 /// creation and never stored — only its SHA-256 hash, so a database leak does
 /// not hand out working ingest credentials.

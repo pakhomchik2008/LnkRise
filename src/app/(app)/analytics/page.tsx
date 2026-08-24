@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { AnalyticsView } from "@/components/analytics/analytics-view";
+import { LinkedInSyncButton } from "@/components/analytics/linkedin-sync-button";
 import { Card } from "@/components/ui/card";
 import { GrowthScore } from "@/components/ui/growth-score";
 import { requireUserId } from "@/lib/auth";
 import { GROWTH_TIERS, PLAN_ACCESS, growthTier } from "@/lib/constants";
+import { communityApiEnabled } from "@/lib/linkedin/client";
 import { prisma } from "@/lib/prisma";
 import type { PlanId, StatPoint } from "@/types";
 
@@ -32,6 +34,10 @@ export default async function AnalyticsPage() {
 
   if (!user) redirect("/login");
   if (!user.onboardedAt) redirect("/onboarding");
+
+  const linkedinConnected = communityApiEnabled()
+    ? Boolean(await prisma.account.findFirst({ where: { userId, provider: "linkedin" }, select: { id: true } }))
+    : false;
 
   const plan = (user.subscription?.plan ?? "trial") as PlanId;
   const unlocked = PLAN_ACCESS[plan].analytics;
@@ -71,11 +77,14 @@ export default async function AnalyticsPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      <header>
-        <h1 className="text-2xl font-bold tracking-tight text-ink">Analytics</h1>
-        <p className="mt-1 text-sm text-ink-muted">
-          What actually moved, over whichever window tells you something.
-        </p>
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-ink">Analytics</h1>
+          <p className="mt-1 text-sm text-ink-muted">
+            What actually moved, over whichever window tells you something.
+          </p>
+        </div>
+        {linkedinConnected && <LinkedInSyncButton />}
       </header>
 
       <Card variant="gradient-border" className="flex flex-col items-center gap-6 p-7 sm:flex-row">
