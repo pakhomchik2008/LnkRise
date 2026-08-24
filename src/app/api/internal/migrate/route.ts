@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+export const runtime = "nodejs";
+
 /**
  * One-off, temporary endpoint to apply the CoachNote table to production.
  * Sensitive env vars (DATABASE_URL included) are only injected at runtime on
