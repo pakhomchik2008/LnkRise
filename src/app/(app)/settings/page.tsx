@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { ExtensionSection, type KeyView } from "@/components/settings/extension-section";
+import { InspirationsSection } from "@/components/settings/inspirations-section";
 import {
   ConnectionsSection,
   DangerZone,
@@ -32,6 +33,7 @@ export default async function SettingsPage() {
       postingFrequency: true,
       contentTone: true,
       dailyTimeBudget: true,
+      inspirations: true,
       accounts: { select: { provider: true } },
       subscription: { select: { plan: true } },
       apiKeys: {
@@ -63,6 +65,7 @@ export default async function SettingsPage() {
 
       <ProfileSection user={view} />
       <PreferencesSection user={view} />
+      <InspirationsSection initial={user.inspirations} />
       <ExtensionSection keys={keys} />
       <ConnectionsSection user={view} />
       <DangerZone user={view} />

@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart3, FileText, LayoutDashboard, LogOut, Users } from "lucide-react";
+import { BarChart3, FileText, LayoutDashboard, LogOut, Mail, Quote, Users } from "lucide-react";
 import { signOut } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -11,6 +11,8 @@ const ITEMS = [
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/admin/content", label: "Content", icon: FileText },
+  { href: "/admin/case-studies", label: "Case studies", icon: Quote },
+  { href: "/admin/waitlist", label: "Waitlist", icon: Mail },
 ];
 
 export function AdminNav({ userLabel }: { userLabel: string }) {

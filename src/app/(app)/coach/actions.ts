@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireCoachId } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { prisma, toJson } from "@/lib/prisma";
+import { toUtcDay } from "@/lib/utils";
+import type { DailyBriefContent } from "@/types";
 
 const emailSchema = z.string().trim().toLowerCase().email();
 
@@ -101,5 +103,102 @@ export async function updateBranding(formData: FormData) {
   });
 
   revalidatePath("/coach/settings");
+  return { error: null };
+}
+
+// ---------------------------------------------------------------------------
+// Per-client notes and brief overrides
+// ---------------------------------------------------------------------------
+
+/** Throws unless `clientId` is actually one of this coach's clients. */
+async function requireOwnedClient(coachId: string, clientId: string): Promise<void> {
+  const client = await prisma.user.findFirst({ where: { id: clientId, coachId }, select: { id: true } });
+  if (!client) throw new Error("Not your client");
+}
+
+const noteSchema = z.string().trim().min(1).max(2000);
+
+export async function addCoachNote(clientId: string, formData: FormData): Promise<{ error: string | null }> {
+  const coachId = await requireCoachId();
+  await requireOwnedClient(coachId, clientId);
+
+  const parsed = noteSchema.safeParse(formData.get("body"));
+  if (!parsed.success) return { error: "Write something first." };
+
+  await prisma.coachNote.create({ data: { coachId, clientId, body: parsed.data } });
+
+  revalidatePath(`/coach/${clientId}`);
+  return { error: null };
+}
+
+export async function deleteCoachNote(clientId: string, noteId: string): Promise<{ ok: boolean }> {
+  const coachId = await requireCoachId();
+  await prisma.coachNote.deleteMany({ where: { id: noteId, coachId, clientId } });
+  revalidatePath(`/coach/${clientId}`);
+  return { ok: true };
+}
+
+const briefOverrideSchema = z.object({
+  todayFocus: z.string().trim().min(1).max(200),
+  postTopic: z.string().trim().min(1).max(200),
+  postHook: z.string().trim().max(300).optional(),
+  optimizationTitle: z.string().trim().max(120).optional(),
+  optimizationDetail: z.string().trim().max(500).optional(),
+});
+
+/**
+ * Rewrites today's brief for a client. Only the fields a coach can reasonably
+ * judge from outside the client's head (the focus line, the post topic/hook,
+ * the optimization tip) are editable — connectWith/commentOn stay generated,
+ * since a coach guessing at a client's actual network would be worse than
+ * what the AI already produced from their onboarding answers.
+ */
+export async function overrideTodaysBrief(
+  clientId: string,
+  formData: FormData,
+): Promise<{ error: string | null }> {
+  const coachId = await requireCoachId();
+  await requireOwnedClient(coachId, clientId);
+
+  const parsed = briefOverrideSchema.safeParse({
+    todayFocus: formData.get("todayFocus"),
+    postTopic: formData.get("postTopic"),
+    postHook: formData.get("postHook") ?? undefined,
+    optimizationTitle: formData.get("optimizationTitle") ?? undefined,
+    optimizationDetail: formData.get("optimizationDetail") ?? undefined,
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check those fields." };
+
+  const today = toUtcDay();
+  const existing = await prisma.dailyBrief.findUnique({
+    where: { userId_date: { userId: clientId, date: today } },
+    select: { content: true },
+  });
+
+  if (!existing) return { error: "No brief generated for today yet — nothing to override." };
+
+  const content = existing.content as unknown as DailyBriefContent;
+  const updated: DailyBriefContent = {
+    ...content,
+    todayFocus: parsed.data.todayFocus,
+    postIdea: {
+      ...content.postIdea,
+      topic: parsed.data.postTopic,
+      hook: parsed.data.postHook || content.postIdea.hook,
+    },
+    optimizationTip: {
+      title: parsed.data.optimizationTitle || content.optimizationTip.title,
+      detail: parsed.data.optimizationDetail || content.optimizationTip.detail,
+    },
+  };
+
+  await prisma.dailyBrief.update({
+    where: { userId_date: { userId: clientId, date: today } },
+    data: { content: toJson(updated) },
+  });
+
+  revalidatePath(`/coach/${clientId}`);
+  revalidatePath("/daily-brief");
+  revalidatePath("/dashboard");
   return { error: null };
 }
