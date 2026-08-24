@@ -95,6 +95,7 @@ src/
 npm run dev        # development server
 npm run build      # production build
 npm run typecheck  # tsc --noEmit
+npm run test       # vitest — auth guards, quota logic, Stripe webhook
 npm run db:push    # apply the schema
 npm run db:seed    # blog posts and sample case studies
 npm run db:studio  # database browser
