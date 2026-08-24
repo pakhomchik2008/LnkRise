@@ -92,7 +92,7 @@ export function AnalyticsView({
           <Lock className="size-5 text-ink-muted" />
           <div>
             <p className="text-sm font-semibold text-ink">
-              Longer ranges and the read on what's working are a Starter feature
+              Longer ranges and the read on what&apos;s working are a Starter feature
             </p>
             <p className="mt-1 text-sm text-ink-muted">
               The trial shows the same seven days as your dashboard. Upgrading unlocks 30- and

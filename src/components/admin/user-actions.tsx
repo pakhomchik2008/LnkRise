@@ -69,7 +69,7 @@ export function UserActions({
         Delete account
       </button>
 
-      {isSelf && <p className="text-xs text-white/40">You can't delete yourself here.</p>}
+      {isSelf && <p className="text-xs text-white/40">You can&apos;t delete yourself here.</p>}
       {error && <p className="text-xs text-red-400">{error}</p>}
     </div>
   );
