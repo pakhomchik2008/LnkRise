@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Bell, Flame, Menu, Search, X } from "lucide-react";
+import { Bell, Flame, Menu, Search, Sparkles, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import * as React from "react";
@@ -14,6 +14,7 @@ import { cn, pluralize } from "@/lib/utils";
 export interface TopbarProps {
   streak: number;
   notifications: { id: string; title: string; body: string }[];
+  plan: string;
 }
 
 /**
@@ -142,7 +143,7 @@ function MobileNav() {
   );
 }
 
-export function Topbar({ streak, notifications }: TopbarProps) {
+export function Topbar({ streak, notifications, plan }: TopbarProps) {
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-hairline surface-glass px-4 sm:px-6">
       <MobileNav />
@@ -153,6 +154,16 @@ export function Topbar({ streak, notifications }: TopbarProps) {
       <SectionSearch />
 
       <div className="ml-auto flex items-center gap-2">
+        {plan !== "pro" && (
+          <Link
+            href="/billing"
+            className="hidden items-center gap-1.5 rounded-full bg-brand-500 px-3 py-1.5 text-xs font-semibold text-white transition-colors duration-150 hover:bg-brand-600 sm:inline-flex"
+          >
+            <Sparkles aria-hidden className="size-3.5" />
+            Go Pro
+          </Link>
+        )}
+
         <Tooltip content={`${streak} ${pluralize(streak, "day", "days")} in a row`}>
           <span
             className={cn(
