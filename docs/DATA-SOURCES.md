@@ -23,7 +23,11 @@ The gaps in column one are why the other two columns still exist.
 
 ---
 
-## 1. Official API — `source: "api"`
+## 1. Official API — `source: "api"` (not part of the current sale's claim)
+
+Written, unverified, off by default. Dropped from the pitch and the FAQ
+because it has never run against a live, LinkedIn-approved account — see
+`docs/BUYER-README.md`. Documented here for whoever eventually finishes it.
 
 `src/lib/linkedin/client.ts`, `sync.ts`, `tokens.ts`.
 
@@ -147,7 +151,8 @@ only route that covers every field with no approval and no ambiguity.
 
 ## Publishing
 
-`publishDraft` in `src/app/(app)/dashboard/actions.ts` posts through the official
+Same caveat as above — `communityApiEnabled()` gates this off by default, and
+it's unverified. `publishDraft` in `src/app/(app)/dashboard/actions.ts` posts through the official
 `POST /rest/posts` endpoint. The created post's URN comes back in the
 `x-restli-id` **header**, not the body, and is stored on `Post.linkedinUrn`.
 

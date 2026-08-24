@@ -4,6 +4,11 @@ What you're getting, what you're not, and what it takes to run it. Written for
 technical due diligence, not marketing — see `README.md` for the product
 description and local setup walkthrough.
 
+Ownership does not transfer by copying the repo. `LICENSE` is proprietary,
+all-rights-reserved — see `docs/ASSET-TRANSFER-AGREEMENT.md` for the one-page
+template both sides sign at sale, which is what actually assigns IP rights to
+the buyer.
+
 ## What this is
 
 A Next.js app: a client kabinet where each end-user gets a daily coaching
@@ -47,6 +52,14 @@ as a running business — see "What's not included" below.
   messaging on a platform — see `docs/PLATFORM-DATA.md` for why, and don't
   represent it otherwise to your own clients. The product writes drafts; the
   human sends them.
+- **LinkedIn's official Community Management API.** Not part of this sale's
+  claim. `src/lib/linkedin/` has a written client for it (analytics pull,
+  publish), gated behind `LINKEDIN_COMMUNITY_API=enabled` and off by default,
+  but it has never run against a live, LinkedIn-approved account — that
+  approval is a separate, non-guaranteed process you'd apply for yourself.
+  Treat it as unfinished code, not a feature. What actually ships and works
+  today is the manual publish-and-copy flow, the browser extension, and the
+  manual analytics form.
 - **Ongoing support.** This is a one-time handoff (repo + a session walking
   through the stack), not a support contract.
 - **An AI provider key.** The mock engine (`src/lib/ai/mock/`) is real,

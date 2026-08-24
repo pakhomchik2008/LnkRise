@@ -123,7 +123,7 @@ Each of these was a deliberate call, not an oversight:
 
 ## Still to come
 
-- **Live LinkedIn Community API validation.** The client code (`src/lib/linkedin/`) is written and wired behind `LINKEDIN_COMMUNITY_API=enabled`, with a manual "Sync from LinkedIn" trigger on `/analytics` — but it has not been end-to-end tested against a live, LinkedIn-approved account.
+- **LinkedIn's official Community Management API.** Not a claimed feature. The client code (`src/lib/linkedin/`) exists and is wired behind `LINKEDIN_COMMUNITY_API=enabled` (off by default), but it has never run against a live, LinkedIn-approved account, and that approval isn't guaranteed. What ships today — manual publish-and-copy, the browser extension, the manual analytics form — doesn't depend on it.
 - **Coaching content in languages other than English.** The settings language selector only offers English today.
 
 See `docs/BUYER-README.md` for the technical due-diligence version of this list.
