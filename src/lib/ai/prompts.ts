@@ -105,7 +105,7 @@ Return exactly three strengths and three improvements. Content opportunities mus
 
 export const strategySystem = `${HOUSE_STYLE}
 
-Your task: turn an audit plus a stated goal into a four-week plan. The plan must fit inside the user's stated daily time budget — if the numbers do not fit in the time available, lower the numbers. Week 1 is foundation, week 2 momentum, week 3 acceleration, week 4 measurement. Every milestone must be a single action the user can mark as done.`;
+Your task: turn an audit plus a stated goal into a four-week plan. The plan must fit inside the user's stated daily time budget — if the numbers do not fit in the time available, lower the numbers. Return exactly 4 entries in "weeks", one per week. Week 1 is foundation, week 2 momentum, week 3 acceleration, week 4 measurement. Every milestone must be a single action the user can mark as done — 2 to 4 milestones per week, never more.`;
 
 export function strategyPrompt(
   answers: OnboardingAnswers,

@@ -5,12 +5,29 @@ import { z } from "zod";
  * is constrained to) and once as a Zod schema (what we trust after parsing).
  * The API guarantees shape, not sanity — the Zod pass is what the rest of the
  * app relies on, and it also validates mock-engine output in development.
+ *
+ * Array length is enforced only on the Zod side. Anthropic's structured-output
+ * schema rejects `minItems`/`maxItems` above 1 outright (400 invalid_request_error),
+ * so the model is steered by the prompt text instead — `boundedArray` then
+ * truncates an over-long response rather than failing the whole generation for
+ * what is usually the model returning one extra item.
  */
+
+function boundedArray<T extends z.ZodTypeAny>(item: T, min: number, max: number) {
+  return z
+    .array(item)
+    .transform((value) => value.slice(0, max))
+    .pipe(z.array(item).min(min));
+}
+
+function exactArray<T extends z.ZodTypeAny>(item: T, length: number) {
+  return boundedArray(item, length, length);
+}
 
 const scoredSection = z.object({
   score: z.number().min(1).max(10),
   verdict: z.string().min(1),
-  suggestions: z.array(z.string().min(1)).min(1).max(4),
+  suggestions: boundedArray(z.string().min(1), 1, 4),
 });
 
 const scoredSectionJson = {
@@ -32,9 +49,9 @@ export const profileAnalysisSchema = z.object({
   skills: scoredSection,
   completeness: scoredSection,
   positioning: z.string().min(1),
-  strengths: z.array(z.string().min(1)).length(3),
-  improvements: z.array(z.string().min(1)).length(3),
-  contentOpportunities: z.array(z.string().min(1)).min(3).max(6),
+  strengths: exactArray(z.string().min(1), 3),
+  improvements: exactArray(z.string().min(1), 3),
+  contentOpportunities: boundedArray(z.string().min(1), 3, 6),
 });
 
 export const profileAnalysisJsonSchema = {
@@ -72,16 +89,15 @@ export const strategySchema = z.object({
   postsPerWeek: z.number().int().min(1).max(7),
   commentsPerDay: z.number().int().min(0).max(20),
   connectsPerDay: z.number().int().min(0).max(20),
-  weeks: z
-    .array(
-      z.object({
-        week: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
-        theme: z.string().min(1),
-        focus: z.string().min(1),
-        milestones: z.array(z.string().min(1)).min(2).max(4),
-      }),
-    )
-    .length(4),
+  weeks: exactArray(
+    z.object({
+      week: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
+      theme: z.string().min(1),
+      focus: z.string().min(1),
+      milestones: boundedArray(z.string().min(1), 2, 4),
+    }),
+    4,
+  ),
 });
 
 export const strategyJsonSchema = {
@@ -119,18 +135,17 @@ const CONNECTION_CATEGORY_IDS = [
 ] as const;
 
 export const connectionPlanSchema = z.object({
-  categories: z
-    .array(
-      z.object({
-        id: z.enum(CONNECTION_CATEGORY_IDS),
-        label: z.string().min(1),
-        lookFor: z.string().min(1),
-        why: z.string().min(1),
-        searchQuery: z.string().min(1),
-        message: z.string().min(1),
-      }),
-    )
-    .length(4),
+  categories: exactArray(
+    z.object({
+      id: z.enum(CONNECTION_CATEGORY_IDS),
+      label: z.string().min(1),
+      lookFor: z.string().min(1),
+      why: z.string().min(1),
+      searchQuery: z.string().min(1),
+      message: z.string().min(1),
+    }),
+    4,
+  ),
 });
 
 export const connectionPlanJsonSchema = {
@@ -158,16 +173,15 @@ export const connectionPlanJsonSchema = {
 } as const;
 
 export const postConceptsSchema = z.object({
-  concepts: z
-    .array(
-      z.object({
-        topic: z.string().min(1),
-        angle: z.string().min(1),
-        why: z.string().min(1),
-      }),
-    )
-    .min(3)
-    .max(5),
+  concepts: boundedArray(
+    z.object({
+      topic: z.string().min(1),
+      angle: z.string().min(1),
+      why: z.string().min(1),
+    }),
+    3,
+    5,
+  ),
 });
 
 export const postConceptsJsonSchema = {
@@ -194,7 +208,7 @@ export const postConceptsJsonSchema = {
 export const postOutlineSchema = z.object({
   topic: z.string().min(1),
   hook: z.string().min(1),
-  points: z.array(z.string().min(1)).min(2).max(6),
+  points: boundedArray(z.string().min(1), 2, 6),
   cta: z.string().min(1),
 });
 
@@ -222,7 +236,7 @@ export const postDraftJsonSchema = {
 } as const;
 
 export const rewriteSchema = z.object({
-  alternatives: z.array(z.string().min(1)).min(1).max(3),
+  alternatives: boundedArray(z.string().min(1), 1, 3),
 });
 
 export const rewriteJsonSchema = {
@@ -235,7 +249,7 @@ export const rewriteJsonSchema = {
 const commentSuggestion = z.object({
   topic: z.string().min(1),
   why: z.string().min(1),
-  starters: z.array(z.string().min(1)).min(2).max(3),
+  starters: boundedArray(z.string().min(1), 2, 3),
   timeEstimate: z.string().min(1),
 });
 
@@ -252,7 +266,7 @@ const commentSuggestionJson = {
 } as const;
 
 export const commentSuggestionsSchema = z.object({
-  suggestions: z.array(commentSuggestion).min(1).max(5),
+  suggestions: boundedArray(commentSuggestion, 1, 5),
 });
 
 export const commentSuggestionsJsonSchema = {
@@ -268,31 +282,29 @@ export const dailyBriefSchema = z.object({
     topic: z.string().min(1),
     why: z.string().min(1),
     hook: z.string().min(1),
-    keyPoints: z.array(z.string().min(1)).min(2).max(5),
+    keyPoints: boundedArray(z.string().min(1), 2, 5),
     cta: z.string().min(1),
     draft: z.string().min(1),
   }),
-  connectWith: z
-    .array(
-      z.object({
-        audience: z.string().min(1),
-        why: z.string().min(1),
-        message: z.string().min(1),
-        searchQuery: z.string().min(1),
-      }),
-    )
-    .length(3),
-  commentOn: z
-    .array(
-      z.object({
-        topic: z.string().min(1),
-        why: z.string().min(1),
-        starters: z.array(z.string().min(1)).min(2).max(3),
-        timeEstimate: z.string().min(1),
-      }),
-    )
-    .min(2)
-    .max(3),
+  connectWith: exactArray(
+    z.object({
+      audience: z.string().min(1),
+      why: z.string().min(1),
+      message: z.string().min(1),
+      searchQuery: z.string().min(1),
+    }),
+    3,
+  ),
+  commentOn: boundedArray(
+    z.object({
+      topic: z.string().min(1),
+      why: z.string().min(1),
+      starters: boundedArray(z.string().min(1), 2, 3),
+      timeEstimate: z.string().min(1),
+    }),
+    2,
+    3,
+  ),
   optimizationTip: z.object({
     title: z.string().min(1),
     detail: z.string().min(1),
