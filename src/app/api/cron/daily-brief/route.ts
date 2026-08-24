@@ -10,10 +10,15 @@ import type { DailyBriefContent } from "@/types";
 /**
  * Builds the day's brief for everyone due one, and mails it.
  *
- * Runs hourly rather than once at 06:00 UTC. The spec asked for both a fixed
- * UTC time and a per-user send hour, which cannot both hold: 07:00 local is a
- * different UTC hour for every timezone. Hourly + an equality check on the
- * user's local hour is what makes the per-user setting real.
+ * Designed to run hourly, checking each user's local hour against their
+ * `emailBriefHour` preference — that equality check is what makes the
+ * per-user send-time setting real, since 07:00 local is a different UTC
+ * hour for every timezone. `vercel.json` currently schedules this once a
+ * day (Vercel Hobby plan caps cron frequency at daily); on Pro, change the
+ * schedule back to `0 * * * *` and per-user hours resume working as
+ * designed. On the daily schedule, only users whose local hour matches the
+ * single UTC run time get their brief at the "right" hour — everyone else
+ * still gets one, just not necessarily when they asked for it.
  *
  * Brief *dates* stay on UTC days (toUtcDay), matching every read path in the
  * app. A user far enough east receives their brief while UTC is still on the
