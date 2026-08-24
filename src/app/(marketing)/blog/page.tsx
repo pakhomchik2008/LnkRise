@@ -10,6 +10,13 @@ export const metadata: Metadata = {
   alternates: { canonical: "/blog" },
 };
 
+// Not statically prerendered: env vars marked "Sensitive" on Vercel (which
+// DATABASE_URL is on this project) are only injected at request time, not
+// during the build step, so a build-time Prisma call here fails the whole
+// deploy. force-dynamic also means new posts show up without a rebuild,
+// which is the right behaviour for admin-authored content anyway.
+export const dynamic = "force-dynamic";
+
 export default async function BlogIndexPage() {
   const posts = await prisma.blogPost.findMany({
     where: { published: true },
