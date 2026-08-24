@@ -29,18 +29,19 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const branding = user.coach?.brandName
     ? { name: user.coach.brandName, logoUrl: user.coach.brandLogoUrl }
     : null;
+  const plan = effectivePlan(user.subscription);
 
   return (
     <div className="flex min-h-dvh">
       <Sidebar
         user={{ name: user.name, email: user.email, image: user.image }}
-        plan={effectivePlan(user.subscription)}
+        plan={plan}
         nav={isCoach ? [...COACH_NAV, ...APP_NAV] : APP_NAV}
         branding={branding}
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <Topbar streak={user.streak} notifications={[]} />
+        <Topbar streak={user.streak} notifications={[]} plan={plan} />
         <main id="main" className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
           {children}
         </main>
