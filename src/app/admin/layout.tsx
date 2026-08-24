@@ -26,7 +26,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <div className="mx-auto max-w-sm space-y-3 rounded-[var(--radius-md)] border border-white/10 bg-white/5 p-6 text-center">
           <p className="text-sm font-semibold">Admin only</p>
           <p className="text-xs text-white/60">
-            You're signed in as {user?.email ?? "an unknown account"} — this area needs the admin role.
+            You&apos;re signed in as {user?.email ?? "an unknown account"} — this area needs the admin role.
           </p>
           <Link
             href="/dashboard"

@@ -70,8 +70,8 @@ export default async function AdminAnalyticsPage() {
       <header>
         <h1 className="text-2xl font-bold tracking-tight text-white">Platform analytics</h1>
         <p className="mt-1 text-sm text-white/60">
-          Retention cohorts are approximate — they measure "signed up in the window before, still active
-          in the window after." Nothing here is estimated or extrapolated.
+          Retention cohorts are approximate — they measure &ldquo;signed up in the window before, still active
+          in the window after.&rdquo; Nothing here is estimated or extrapolated.
         </p>
       </header>
 
