@@ -16,6 +16,14 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
 
+// ISR rather than force-dynamic: this is the highest-traffic page, so it
+// should stay cached/static, but a build-time DB failure (DATABASE_URL is a
+// "Sensitive" env var on Vercel, only injected at request time, not during
+// build) must not permanently freeze the blog-preview section empty. The
+// catch below lets the initial build succeed with an empty preview; this
+// revalidate window regenerates it against a working DB shortly after.
+export const revalidate = 3600;
+
 async function latestPosts() {
   try {
     return await prisma.blogPost.findMany({
