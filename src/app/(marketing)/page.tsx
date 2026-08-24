@@ -57,10 +57,18 @@ function StructuredData() {
     ],
   };
 
+  // Escape < / > / & so a rogue string in metadata (FAQ answer, plan name)
+  // can never close the script tag with `</script>` and inject arbitrary HTML.
+  // The escaped form is still valid JSON to a JSON-LD parser.
+  const safe = JSON.stringify(data)
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/&/g, "\\u0026");
+
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+      dangerouslySetInnerHTML={{ __html: safe }}
     />
   );
 }

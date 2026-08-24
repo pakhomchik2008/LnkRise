@@ -33,23 +33,15 @@ const payloadSchema = z
     message: "At least one metric is required",
   });
 
-// Small in-process limiter. Good enough for a single instance; move to a shared
-// store when this runs on more than one node.
-const hits = new Map<string, { count: number; resetAt: number }>();
-const WINDOW_MS = 60_000;
-const MAX_PER_WINDOW = 12;
+// The shared clock is the `ApiKey.lastUsedAt` column — resolveApiKey returns
+// what it was before this call, so any instance can decide "too soon" without
+// coordinating in memory. Two subsequent posts from the same key must be at
+// least MIN_INTERVAL_MS apart; anything faster is a bug or an abuse burst.
+const MIN_INTERVAL_MS = 5_000;
 
-function rateLimited(userId: string): boolean {
-  const now = Date.now();
-  const entry = hits.get(userId);
-
-  if (!entry || now > entry.resetAt) {
-    hits.set(userId, { count: 1, resetAt: now + WINDOW_MS });
-    return false;
-  }
-
-  entry.count += 1;
-  return entry.count > MAX_PER_WINDOW;
+function tooSoon(prev: Date | null): boolean {
+  if (!prev) return false;
+  return Date.now() - prev.getTime() < MIN_INTERVAL_MS;
 }
 
 const CORS = {
@@ -64,14 +56,16 @@ export function OPTIONS() {
 }
 
 export async function POST(request: Request) {
-  const userId = await resolveApiKey(bearerFrom(request));
-  if (!userId) {
+  const resolved = await resolveApiKey(bearerFrom(request));
+  if (!resolved) {
     return NextResponse.json({ error: "Invalid or revoked key" }, { status: 401, headers: CORS });
   }
 
-  if (rateLimited(userId)) {
+  if (tooSoon(resolved.lastUsedAt)) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429, headers: CORS });
   }
+
+  const userId = resolved.userId;
 
   let body: unknown;
   try {

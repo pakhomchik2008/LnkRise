@@ -50,15 +50,21 @@ export async function revokeApiKey(userId: string, keyId: string): Promise<boole
 /**
  * Resolves a raw key to a user id, or null. Constant-time comparison on the
  * hash so a timing side channel cannot be used to recover a key byte by byte.
+ *
+ * Returns the previous `lastUsedAt` alongside the userId so callers can
+ * throttle without an in-process map (which is useless on multi-instance
+ * hosts like Vercel). Persist storage on the row is the shared clock.
  */
-export async function resolveApiKey(raw: string | null | undefined): Promise<string | null> {
+export async function resolveApiKey(
+  raw: string | null | undefined,
+): Promise<{ userId: string; lastUsedAt: Date | null } | null> {
   if (!raw || !raw.startsWith(PREFIX) || raw.length > 200) return null;
 
   const candidate = hash(raw);
 
   const record = await prisma.apiKey.findUnique({
     where: { hashedKey: candidate },
-    select: { id: true, userId: true, hashedKey: true, revokedAt: true },
+    select: { id: true, userId: true, hashedKey: true, revokedAt: true, lastUsedAt: true },
   });
 
   if (!record || record.revokedAt) return null;
@@ -72,7 +78,7 @@ export async function resolveApiKey(raw: string | null | undefined): Promise<str
     data: { lastUsedAt: new Date() },
   });
 
-  return record.userId;
+  return { userId: record.userId, lastUsedAt: record.lastUsedAt };
 }
 
 export function bearerFrom(request: Request): string | null {
