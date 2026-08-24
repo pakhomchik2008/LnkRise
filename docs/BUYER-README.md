@@ -32,9 +32,11 @@ as a running business — see "What's not included" below.
 - **Billing.** No Stripe integration — `/billing` is a placeholder page. If
   you're reselling to your own clients, you invoice them yourself; nothing in
   this codebase assumes a payment processor.
-- **Analytics dashboard.** `/analytics` is a placeholder. The underlying data
-  model (`AnalyticsSnapshot`) and manual-logging flow inside the daily brief
-  both work; the dedicated dashboard page does not exist yet.
+- **Analytics dashboard.** Built. `/analytics` renders the growth score,
+  7/30/90-day trend chart with per-metric switching, and a derived insights
+  panel. Range is server-sliced by plan (trial gets 7 days; Starter and Pro
+  get the full 90) so the RSC payload never leaks the wider window to a
+  locked account.
 - **Growth/traction promises.** Nothing here automates posting, connecting or
   messaging on a platform — see `docs/PLATFORM-DATA.md` for why, and don't
   represent it otherwise to your own clients. The product writes drafts; the

@@ -2,7 +2,7 @@
 
 A daily coaching plan for building a professional presence: it reads your profile and your goal, then hands you one concrete plan a day — what to write, who to reach out to, what to reply to, and whether any of it is working.
 
-**Phase 1 is complete.** Design system, component library, database, auth, landing site, onboarding, dashboard and settings all work end to end. Later phases are listed at the bottom.
+**Built so far.** Foundation (design system, component library, database, auth, landing site, onboarding, dashboard, settings). Content hub with AI generation, editor, templates, scheduling reminders. Daily-brief cron with email delivery, engagement scoring, four connection lanes. Live analytics dashboard with growth score, plan-gated ranges, insights. Coach admin (multi-client, per-client cabinet, white-label branding). Role-gated admin panel with user management, platform analytics, blog CRUD. See the very bottom for what is still stubbed.
 
 ---
 
@@ -123,4 +123,9 @@ Each of these was a deliberate call, not an oversight:
 
 ## Still to come
 
-Profile analysis from real data, the strategy engine's deeper modes, the cron-driven brief with email delivery, the AI writing workspace and content calendar, the analytics dashboard, Stripe billing, the admin panel, and the full blog/SEO surface.
+- **Stripe billing.** `/billing` is a placeholder. The `Subscription` model, `stripeCustomerId` and `PLAN_ACCESS` gates are already in place; the payment surface is not.
+- **Case studies.** The `CaseStudy` model exists and is seeded unpublished, but no public page renders it yet.
+- **Live LinkedIn Community API validation.** The client code (`src/lib/linkedin/`) is written and wired behind `LINKEDIN_COMMUNITY_API=enabled`, but has not been end-to-end tested against a live approved account.
+- **Waitlist admin view.** Entries collected from the landing page live in `WaitlistEntry`; the admin panel does not yet expose them.
+
+See `docs/BUYER-README.md` for the technical due-diligence version of this list.
