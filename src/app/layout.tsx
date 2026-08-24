@@ -16,10 +16,26 @@ const jetbrains = JetBrains_Mono({
   display: "swap",
 });
 
-const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+// `?? "..."` alone doesn't catch an empty string, and a malformed value
+// (missing scheme, stray whitespace) throws inside `new URL()` and takes the
+// whole build down — this must never be fatal, since metadataBase is
+// cosmetic (canonical/OG URL resolution), not something the app depends on.
+function resolveAppUrl(): URL {
+  const raw = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  if (raw) {
+    try {
+      return new URL(raw);
+    } catch {
+      // fall through to the default below
+    }
+  }
+  return new URL("http://localhost:3000");
+}
+
+const appUrl = resolveAppUrl();
 
 export const metadata: Metadata = {
-  metadataBase: new URL(appUrl),
+  metadataBase: appUrl,
   title: {
     default: `${APP_NAME} — ${APP_TAGLINE}`,
     template: `%s · ${APP_NAME}`,
