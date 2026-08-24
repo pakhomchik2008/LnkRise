@@ -6,7 +6,7 @@
 export const FAQ_ITEMS = [
   {
     q: "Does this post for me or automate my account?",
-    a: "It can publish, but only when you press publish. With your account connected, LnkRise posts through the platform's official API: you read the exact text in a confirmation dialog, and it goes out immediately under your own name. No scheduler, no background posting, nothing that acts while you are away. Outreach and comments are never automated — you get the draft and the search query, you do the sending.",
+    a: "No. LnkRise writes the draft; you read it in a confirmation step and post it yourself, under your own name, whenever you choose. No scheduler, no background posting, nothing that acts while you are away. Outreach and comments work the same way — you get the draft and the search query, you do the sending.",
   },
   {
     q: "Do you need my password or account access?",
@@ -14,7 +14,7 @@ export const FAQ_ITEMS = [
   },
   {
     q: "Where do the numbers on the analytics page come from?",
-    a: "From you, mostly. Three places, and you choose. Once your account is connected, LnkRise pulls post impressions and reach straight from the platform's official creator-analytics API. A companion browser extension can read the numbers off your own analytics page when you click it. And there is always a thirty-second manual form. No single route covers everything — total connections has no API at all — so the manual form stays whichever you pick.",
+    a: "From you. A companion browser extension can read the numbers off your own analytics page when you click it — nothing is scraped without you opening the page yourself. And there is always a thirty-second manual form. Whichever you pick, it takes about two days of numbers before the chart means anything.",
   },
   {
     q: "Is the advice actually specific to my field?",
