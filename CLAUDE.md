@@ -36,6 +36,6 @@ The mock engine is real coaching content, not filler — it is what a user sees 
 ## Commands
 
 ```bash
-npm run dev / build / typecheck
+npm run dev / build / typecheck / test
 npm run db:push / db:seed / db:studio
 ```

@@ -31,6 +31,13 @@ as a running business — see "What's not included" below.
 - Every server action re-checks the session and scopes its query by the
   caller's own `userId` (or, for coach routes, by `coachId` ownership) — see
   `src/lib/auth.ts:requireUserId` / `requireCoachId`.
+- A Vitest suite (`npm run test`) covering the three places a bug is most
+  expensive: the auth guards (`tests/lib/auth.test.ts`), the AI quota
+  race-condition handling (`tests/lib/quota.test.ts`), and the Stripe webhook
+  — signature verification, Starter's hand-stamped expiry, and the
+  metadata/customer-lookup fallback for subscription sync
+  (`tests/api/webhooks-stripe.test.ts`). 30 tests, all real assertions against
+  the actual guard/billing logic, not scaffolding.
 
 ## What's not included
 
