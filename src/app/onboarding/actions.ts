@@ -67,6 +67,7 @@ export async function completeOnboarding(input: unknown): Promise<CompleteOnboar
 
   const parsed = answersSchema.safeParse(input);
   if (!parsed.success) {
+    console.error("[onboarding] answers failed validation", JSON.stringify(parsed.error.issues));
     return { ok: false, error: "Some answers did not come through. Go back and check them." };
   }
 
