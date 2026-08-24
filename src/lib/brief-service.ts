@@ -1,11 +1,11 @@
 import "server-only";
 import { generateDailyBrief } from "@/lib/ai";
 import { attachRealPeople, tasksFromBrief } from "@/lib/briefs";
-import { PLAN_ACCESS } from "@/lib/constants";
+import { PLAN_ACCESS, effectivePlan } from "@/lib/constants";
 import { factsForPrompt, markFactsUsed } from "@/lib/fact-store";
 import { labelInspirations } from "@/lib/linkedin/inspirations";
 import { prisma, toJson } from "@/lib/prisma";
-import type { DailyBriefContent, OnboardingAnswers, PlanId, Strategy } from "@/types";
+import type { DailyBriefContent, OnboardingAnswers, Strategy } from "@/types";
 
 /**
  * Creating a day of the plan, shared by onboarding (day 1) and the cron
@@ -41,7 +41,7 @@ export async function ensureBriefForUser(userId: string, date: Date): Promise<En
       onboardingData: true,
       strategy: true,
       inspirations: true,
-      subscription: { select: { plan: true } },
+      subscription: { select: { plan: true, status: true, currentPeriodEnd: true } },
     },
   });
 
@@ -78,7 +78,7 @@ export async function ensureBriefForUser(userId: string, date: Date): Promise<En
 
   let content = generated.value;
 
-  const plan = (user.subscription?.plan ?? "trial") as PlanId;
+  const plan = effectivePlan(user.subscription);
   if (PLAN_ACCESS[plan].commentCoaching) {
     content = attachRealPeople(content, labelInspirations(user.inspirations));
   }

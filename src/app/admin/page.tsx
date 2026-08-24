@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { AlertCircle } from "lucide-react";
+import { PLANS, effectivePlan } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
+import { stripeEnabled } from "@/lib/stripe";
 
 function StatCard({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
   return (
@@ -37,6 +39,8 @@ export default async function AdminOverviewPage() {
 
   const avgScore = avg._avg.growthScore ? Math.round(avg._avg.growthScore) : 0;
 
+  const revenue = stripeEnabled() ? await revenueSummary() : null;
+
   return (
     <div className="mx-auto max-w-5xl space-y-8">
       <header>
@@ -58,18 +62,26 @@ export default async function AdminOverviewPage() {
       </section>
 
       <section aria-label="Revenue">
-        <div className="rounded-[var(--radius-md)] border border-white/10 bg-white/[0.03] p-5">
-          <div className="flex items-start gap-3">
-            <AlertCircle aria-hidden className="mt-0.5 size-4 shrink-0 text-white/40" />
-            <div>
-              <p className="text-sm font-semibold text-white">Revenue metrics not wired</p>
-              <p className="mt-1 text-xs leading-relaxed text-white/60">
-                Stripe is not connected on this deployment, so MRR, churn and LTV would be invented if this
-                card claimed them. Wire billing (see the Phase 6 plan) and this section fills in.
-              </p>
+        {revenue ? (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <StatCard label="MRR" value={`$${revenue.mrr}`} sub="active Pro subscriptions" />
+            <StatCard label="Pro subscribers" value={revenue.proCount} />
+            <StatCard label="Starter passes (active)" value={revenue.starterCount} />
+          </div>
+        ) : (
+          <div className="rounded-[var(--radius-md)] border border-white/10 bg-white/[0.03] p-5">
+            <div className="flex items-start gap-3">
+              <AlertCircle aria-hidden className="mt-0.5 size-4 shrink-0 text-white/40" />
+              <div>
+                <p className="text-sm font-semibold text-white">Revenue metrics not wired</p>
+                <p className="mt-1 text-xs leading-relaxed text-white/60">
+                  Stripe is not connected on this deployment, so MRR, churn and LTV would be invented if
+                  this card claimed them. Add the Stripe env vars and this section fills in.
+                </p>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </section>
 
       <section aria-label="Top users">
@@ -100,4 +112,19 @@ export default async function AdminOverviewPage() {
       </section>
     </div>
   );
+}
+
+async function revenueSummary(): Promise<{ mrr: number; proCount: number; starterCount: number }> {
+  const subscriptions = await prisma.subscription.findMany({
+    where: { plan: { in: ["starter", "pro"] } },
+    select: { plan: true, status: true, currentPeriodEnd: true },
+  });
+
+  const active = subscriptions.filter((s) => effectivePlan(s) !== "trial");
+  const proCount = active.filter((s) => effectivePlan(s) === "pro").length;
+  const starterCount = active.filter((s) => effectivePlan(s) === "starter").length;
+
+  const proPrice = Number(PLANS.find((p) => p.id === "pro")?.price.replace(/[^0-9.]/g, "") ?? 0);
+
+  return { mrr: proCount * proPrice, proCount, starterCount };
 }

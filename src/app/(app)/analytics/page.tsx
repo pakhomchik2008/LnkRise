@@ -5,10 +5,10 @@ import { LinkedInSyncButton } from "@/components/analytics/linkedin-sync-button"
 import { Card } from "@/components/ui/card";
 import { GrowthScore } from "@/components/ui/growth-score";
 import { requireUserId } from "@/lib/auth";
-import { GROWTH_TIERS, PLAN_ACCESS, growthTier } from "@/lib/constants";
+import { GROWTH_TIERS, PLAN_ACCESS, effectivePlan, growthTier } from "@/lib/constants";
 import { communityApiEnabled } from "@/lib/linkedin/client";
 import { prisma } from "@/lib/prisma";
-import type { PlanId, StatPoint } from "@/types";
+import type { StatPoint } from "@/types";
 
 export const metadata: Metadata = {
   title: "Analytics",
@@ -28,7 +28,7 @@ export default async function AnalyticsPage() {
     select: {
       growthScore: true,
       onboardedAt: true,
-      subscription: { select: { plan: true } },
+      subscription: { select: { plan: true, status: true, currentPeriodEnd: true } },
     },
   });
 
@@ -39,7 +39,7 @@ export default async function AnalyticsPage() {
     ? Boolean(await prisma.account.findFirst({ where: { userId, provider: "linkedin" }, select: { id: true } }))
     : false;
 
-  const plan = (user.subscription?.plan ?? "trial") as PlanId;
+  const plan = effectivePlan(user.subscription);
   const unlocked = PLAN_ACCESS[plan].analytics;
 
   // The window is enforced on the server so a locked user cannot read the

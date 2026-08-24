@@ -10,13 +10,12 @@ import {
 } from "@/lib/ai/content";
 import { requireUserId } from "@/lib/auth";
 import type { BestTime } from "@/lib/best-time";
-import { PLAN_ACCESS } from "@/lib/constants";
+import { PLAN_ACCESS, effectivePlan } from "@/lib/constants";
 import { factsForPrompt, markFactsUsed } from "@/lib/fact-store";
 import { prisma } from "@/lib/prisma";
 import { consumeGeneration, quotaFor, releaseGeneration, type QuotaState } from "@/lib/quota";
 import type {
   OnboardingAnswers,
-  PlanId,
   PostConcept,
   PostOutline,
   RewriteMode,
@@ -294,10 +293,10 @@ export async function suggestedPostTime(): Promise<
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { subscription: { select: { plan: true } } },
+    select: { subscription: { select: { plan: true, status: true, currentPeriodEnd: true } } },
   });
 
-  const plan = (user?.subscription?.plan ?? "trial") as PlanId;
+  const plan = effectivePlan(user?.subscription ?? null);
 
   // Redacted on the server, same as the Connections lanes: a locked feature's
   // computed value must never reach the browser, or the gate is one network

@@ -10,6 +10,7 @@ import {
   type SettingsUser,
 } from "@/components/settings/settings-forms";
 import { requireUserId } from "@/lib/auth";
+import { effectivePlan } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = {
@@ -35,7 +36,7 @@ export default async function SettingsPage() {
       dailyTimeBudget: true,
       inspirations: true,
       accounts: { select: { provider: true } },
-      subscription: { select: { plan: true } },
+      subscription: { select: { plan: true, status: true, currentPeriodEnd: true } },
       apiKeys: {
         where: { revokedAt: null },
         orderBy: { createdAt: "desc" },
@@ -51,7 +52,7 @@ export default async function SettingsPage() {
   const view: SettingsUser = {
     ...user,
     providers: user.accounts.map((account) => account.provider),
-    plan: user.subscription?.plan ?? "trial",
+    plan: effectivePlan(user.subscription),
   };
 
   return (

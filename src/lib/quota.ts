@@ -1,5 +1,5 @@
 import "server-only";
-import { PLAN_ACCESS } from "@/lib/constants";
+import { PLAN_ACCESS, effectivePlan } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import { toUtcDay } from "@/lib/utils";
 import type { PlanId } from "@/types";
@@ -22,7 +22,7 @@ export async function quotaFor(userId: string): Promise<QuotaState> {
   const [user, usage] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
-      select: { subscription: { select: { plan: true } } },
+      select: { subscription: { select: { plan: true, status: true, currentPeriodEnd: true } } },
     }),
     prisma.aiUsage.findUnique({
       where: { userId_date: { userId, date: toUtcDay() } },
@@ -30,7 +30,7 @@ export async function quotaFor(userId: string): Promise<QuotaState> {
     }),
   ]);
 
-  const plan = (user?.subscription?.plan ?? "trial") as PlanId;
+  const plan = effectivePlan(user?.subscription ?? null);
   const limit = PLAN_ACCESS[plan].aiGenerationsPerDay;
   const used = usage?.generations ?? 0;
 

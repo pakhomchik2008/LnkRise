@@ -6,11 +6,11 @@ import { ContentHub } from "@/components/content/content-hub";
 import { TemplateLibrary } from "@/components/content/template-library";
 import { Button } from "@/components/ui/button";
 import { requireUserId } from "@/lib/auth";
-import { PLAN_ACCESS } from "@/lib/constants";
+import { PLAN_ACCESS, effectivePlan } from "@/lib/constants";
 import { templatesFor } from "@/lib/content-templates";
 import { prisma } from "@/lib/prisma";
 import { quotaFor } from "@/lib/quota";
-import type { PlanId, PostStatus, PostSummary } from "@/types";
+import type { PostStatus, PostSummary } from "@/types";
 
 export const metadata: Metadata = {
   title: "Content",
@@ -23,7 +23,7 @@ export default async function ContentPage() {
   const [user, posts, quota] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
-      select: { onboardedAt: true, subscription: { select: { plan: true } } },
+      select: { onboardedAt: true, subscription: { select: { plan: true, status: true, currentPeriodEnd: true } } },
     }),
     prisma.post.findMany({
       where: { userId },
@@ -46,7 +46,7 @@ export default async function ContentPage() {
 
   if (!user?.onboardedAt) redirect("/onboarding");
 
-  const plan = (user.subscription?.plan ?? "trial") as PlanId;
+  const plan = effectivePlan(user.subscription);
   const summaries: PostSummary[] = posts.map((post) => ({
     id: post.id,
     title: post.title,
